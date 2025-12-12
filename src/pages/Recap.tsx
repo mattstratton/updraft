@@ -81,17 +81,36 @@ export default function Recap() {
   const handleShare = async () => {
     const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\n#Updraft #Bluesky`;
     
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: "My Updraft",
           text: shareText,
         });
-      } catch {
-        // User cancelled
+        return;
       }
-    } else {
+    } catch (err) {
+      // If user cancelled, don't show error
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      // Fall through to clipboard
+    }
+    
+    // Fallback to clipboard
+    try {
       await navigator.clipboard.writeText(shareText);
+      toast.success("Copied to clipboard!");
+    } catch {
+      // Manual fallback for environments without clipboard API
+      const textArea = document.createElement("textarea");
+      textArea.value = shareText;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
       toast.success("Copied to clipboard!");
     }
   };
