@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
 import { StoryCard, CardVariant } from "@/components/RecapCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -149,7 +150,9 @@ export default function Recap() {
   const handleShare = async () => {
     const appUrl = window.location.origin;
     const userHandle = recap?.profile.handle?.replace(/^@/, "") || "";
-    const shareText = `Check out my ${recap?.year} Bluesky recap! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nSee mine and get your own at ${appUrl}/recap?user=${userHandle}\n\n#Updraft${recap?.year || '2025'}`;
+    // Format numbers with commas for share text
+    const formatNum = (num: number) => num.toLocaleString('en-US');
+    const shareText = `Check out my ${recap?.year} Bluesky recap! 🌬️\n\n📊 ${formatNum(recap?.stats.totalPosts || 0)} posts\n❤️ ${formatNum(recap?.stats.totalLikes || 0)} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nSee mine and get your own at ${appUrl}/recap?user=${userHandle}\n\n#Updraft${recap?.year || '2025'}`;
     
     try {
       if (navigator.share) {
@@ -304,10 +307,21 @@ export default function Recap() {
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
-            <Button variant="hero" size="lg" onClick={handleShare}>
+          <div className="flex flex-col items-center gap-3 mt-8 w-full max-w-md">
+            <Button variant="hero" size="lg" onClick={handleShare} className="w-full sm:w-auto">
               <Share2 className="w-4 h-4 mr-2" />
               Share your Updraft
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => {
+                setRecap(null);
+                setSearchParams({});
+              }}
+              className="w-full sm:w-auto"
+            >
+              Try another handle
             </Button>
           </div>
 
@@ -315,12 +329,13 @@ export default function Recap() {
             #Updraft · updraft-app.com
           </p>
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 gradient-hero">
+    <div className="min-h-screen flex flex-col gradient-hero">
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] gradient-glow animate-glow-pulse" />
 
       <div className="relative z-10 w-full max-w-md">
@@ -371,6 +386,7 @@ export default function Recap() {
           No tracking. No posting. Just your data.
         </p>
       </div>
+      <Footer />
     </div>
   );
 }

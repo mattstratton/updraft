@@ -75,9 +75,8 @@ interface StoryCardProps {
 }
 
 function formatNumber(num: number): string {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
-  if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-  return num.toLocaleString();
+  // Format numbers with commas (e.g., 1,234,567)
+  return num.toLocaleString('en-US');
 }
 
 function formatHour(hour: number): string {
@@ -182,10 +181,10 @@ export function StoryCard({ data, className }: StoryCardProps) {
             </p>
             <div className="flex justify-center gap-6 text-lg">
               <span className="flex items-center gap-1">
-                <span className="text-red-400">❤️</span> {data.topPostLikes}
+                <span className="text-red-400">❤️</span> {formatNumber(data.topPostLikes || 0)}
               </span>
               <span className="flex items-center gap-1">
-                <span className="text-green-400">🔁</span> {data.topPostReposts}
+                <span className="text-green-400">🔁</span> {formatNumber(data.topPostReposts || 0)}
               </span>
             </div>
           </div>
@@ -222,13 +221,13 @@ export function StoryCard({ data, className }: StoryCardProps) {
           <div className="space-y-6 text-center">
             <div>
               <span className="text-7xl font-bold text-foreground">
-                {data.longestStreak || 0}
+                {formatNumber(data.longestStreak || 0)}
               </span>
               <p className="text-xl text-muted-foreground mt-2">day streak</p>
             </div>
             <div>
               <span className="text-3xl font-bold text-foreground">
-                {data.daysActive || 0}
+                {formatNumber(data.daysActive || 0)}
               </span>
               <p className="text-sm text-muted-foreground">days active this year</p>
             </div>
@@ -260,7 +259,7 @@ export function StoryCard({ data, className }: StoryCardProps) {
                   <div className="flex-1 text-left">
                     <p className="font-medium text-sm truncate">{fan.displayName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {fan.likes}❤️ {fan.reposts}🔁
+                      {formatNumber(fan.likes)}❤️ {formatNumber(fan.reposts)}🔁
                     </p>
                   </div>
                 </div>
@@ -325,7 +324,7 @@ export function StoryCard({ data, className }: StoryCardProps) {
             </span>
             <p className="text-xl text-muted-foreground">total interactions</p>
             <p className="text-base text-muted-foreground/80">
-              Avg. {data.avgEngagement || 0} per post
+              Avg. {formatNumber(data.avgEngagement || 0)} per post
             </p>
           </div>
         );
