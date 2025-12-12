@@ -158,13 +158,13 @@ export function StoryCard({ data, className }: StoryCardProps) {
             </div>
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <span className="text-3xl font-bold text-primary">
+                <span className="text-3xl font-bold text-foreground">
                   {formatNumber(data.totalLikes || 0)}
                 </span>
                 <p className="text-sm text-muted-foreground">likes received</p>
               </div>
               <div>
-                <span className="text-3xl font-bold text-accent">
+                <span className="text-3xl font-bold text-foreground">
                   {formatNumber(data.totalReposts || 0)}
                 </span>
                 <p className="text-sm text-muted-foreground">reposts</p>
@@ -196,20 +196,20 @@ export function StoryCard({ data, className }: StoryCardProps) {
           <div className="space-y-6 text-center">
             <div>
               <p className="text-muted-foreground text-sm mb-1">Peak month</p>
-              <span className="text-4xl font-bold text-primary">
+              <span className="text-4xl font-bold text-foreground">
                 {data.mostActiveMonth}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-muted-foreground text-sm mb-1">Favorite day</p>
-                <span className="text-2xl font-semibold text-accent">
+                <span className="text-2xl font-semibold text-foreground">
                   {data.mostActiveDay}
                 </span>
               </div>
               <div>
                 <p className="text-muted-foreground text-sm mb-1">Peak hour</p>
-                <span className="text-2xl font-semibold text-primary">
+                <span className="text-2xl font-semibold text-foreground">
                   {formatHour(data.peakHour || 12)}
                 </span>
               </div>
@@ -227,7 +227,7 @@ export function StoryCard({ data, className }: StoryCardProps) {
               <p className="text-xl text-muted-foreground mt-2">day streak</p>
             </div>
             <div>
-              <span className="text-3xl font-bold text-primary">
+              <span className="text-3xl font-bold text-foreground">
                 {data.daysActive || 0}
               </span>
               <p className="text-sm text-muted-foreground">days active this year</p>
