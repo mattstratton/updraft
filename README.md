@@ -24,9 +24,9 @@ git clone <YOUR_GIT_URL>
 cd updraft
 
 # Step 2: Set up environment variables
-cp server/.env.example server/.env.local
+cp backend/.env.example backend/.env.local
 
-# Edit server/.env.local with your Bluesky credentials:
+# Edit backend/.env.local with your Bluesky credentials:
 # - BLUESKY_IDENTIFIER=your.handle.bsky.social
 # - BLUESKY_APP_PASSWORD=your-app-password
 
@@ -69,16 +69,25 @@ If you prefer to run without Docker:
 
 ```sh
 # Terminal 1: Start backend
-cd server
+cd backend
 npm install
+cp .env.example .env.local
+# Edit .env.local with your Bluesky credentials
 npm run dev
 
 # Terminal 2: Start frontend
+cd frontend
 npm install
+cp .env.example .env.local
+# Edit .env.local if your backend runs on a different port
 npm run dev
 ```
 
-## Deployment to Railway
+**Note**: The frontend `.env.local` is optional - if not present, it will default to `http://localhost:3001`. For Docker Compose, environment variables are set in `docker-compose.dev.yml`.
+
+## Deployment to Railway (Monorepo)
+
+This project is set up as a monorepo with `frontend/` and `backend/` directories. Railway supports monorepo deployments.
 
 ### Backend Service
 
@@ -86,8 +95,8 @@ npm run dev
 2. **Create a new project** and connect your GitHub repository
 3. **Add a new service** → "Deploy from GitHub repo"
 4. **Configure the service**:
-   - Root Directory: `server`
-   - Dockerfile Path: `server/Dockerfile`
+   - Root Directory: `backend`
+   - Dockerfile Path: `backend/Dockerfile`
 5. **Set environment variables**:
    - `BLUESKY_IDENTIFIER` - Your Bluesky handle
    - `BLUESKY_APP_PASSWORD` - Your Bluesky app password
@@ -100,8 +109,8 @@ Railway will provide a URL like `https://your-backend.up.railway.app`
 
 1. **Add another service** in the same Railway project
 2. **Configure the service**:
-   - Root Directory: `.` (root)
-   - Dockerfile Path: `Dockerfile`
+   - Root Directory: `frontend`
+   - Dockerfile Path: `frontend/Dockerfile`
    - Build Command: (not needed, Docker handles it)
 3. **Set environment variables**:
    - `VITE_API_URL` - Your backend URL (e.g., `https://your-backend.up.railway.app`)
@@ -115,22 +124,28 @@ Railway services in the same project can communicate using service names. Update
 
 ```
 updraft/
-├── server/              # Express backend API
+├── backend/             # Express backend API
 │   ├── src/
 │   │   ├── index.ts    # Server entry point
 │   │   ├── routes/     # API routes
 │   │   └── services/   # Bluesky API service
 │   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   ├── railway.json
 │   └── package.json
-├── src/                 # React frontend
-│   ├── components/
-│   ├── pages/
-│   └── ...
-├── Dockerfile           # Frontend production Dockerfile
-├── Dockerfile.dev       # Frontend development Dockerfile
+├── frontend/            # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── ...
+│   ├── public/
+│   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   ├── nginx.conf
+│   ├── railway.json
+│   └── package.json
 ├── docker-compose.yml   # Production Docker Compose
-├── docker-compose.dev.yml # Development Docker Compose
-└── package.json
+└── docker-compose.dev.yml # Development Docker Compose
 ```
 
 ## Technologies
@@ -141,13 +156,16 @@ updraft/
 
 ## Environment Variables
 
-### Backend (`server/.env.local`)
+### Backend (`backend/.env.local`)
 - `BLUESKY_IDENTIFIER` - Your Bluesky handle
 - `BLUESKY_APP_PASSWORD` - Your Bluesky app password
 - `PORT` - Server port (default: 3001)
 
-### Frontend (build-time)
+### Frontend (`frontend/.env.local` - optional for local dev)
 - `VITE_API_URL` - Backend API URL (default: `http://localhost:3001`)
+  - For Docker Compose: Set in `docker-compose.dev.yml`
+  - For Railway: Set in Railway dashboard
+  - For local dev: Create `frontend/.env.local` from `frontend/.env.example`
 
 ## Social Media Preview Images
 

@@ -4,8 +4,8 @@
 
 ```bash
 # 1. Set up environment variables
-cp server/.env.example server/.env.local
-# Edit server/.env.local with your Bluesky credentials
+cp backend/.env.example backend/.env.local
+# Edit backend/.env.local with your Bluesky credentials
 
 # 2. Start development environment
 docker-compose -f docker-compose.dev.yml up --build
@@ -81,7 +81,7 @@ FRONTEND_PORT=8081
 ```
 
 ### Environment variables not loading
-Make sure `server/.env.local` exists and has the correct format (no quotes around values).
+Make sure `backend/.env.local` exists and has the correct format (no quotes around values).
 
 ### Frontend can't reach backend
 - Check that backend is running: `curl http://localhost:3001/health`
