@@ -14,7 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bluesky_did: string | null
+          bluesky_handle: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bluesky_did?: string | null
+          bluesky_handle?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bluesky_did?: string | null
+          bluesky_handle?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      updraft_recaps: {
+        Row: {
+          generated_at: string
+          id: string
+          most_active_day: string | null
+          most_active_month: string | null
+          recap_variant: string | null
+          streak_days: number | null
+          top_post_engagement: number | null
+          top_post_text: string | null
+          top_theme: string | null
+          total_followers_gained: number | null
+          total_likes: number | null
+          total_posts: number | null
+          total_reach: number | null
+          total_reposts: number | null
+          user_id: string
+          year: number
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          most_active_day?: string | null
+          most_active_month?: string | null
+          recap_variant?: string | null
+          streak_days?: number | null
+          top_post_engagement?: number | null
+          top_post_text?: string | null
+          top_theme?: string | null
+          total_followers_gained?: number | null
+          total_likes?: number | null
+          total_posts?: number | null
+          total_reach?: number | null
+          total_reposts?: number | null
+          user_id: string
+          year?: number
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          most_active_day?: string | null
+          most_active_month?: string | null
+          recap_variant?: string | null
+          streak_days?: number | null
+          top_post_engagement?: number | null
+          top_post_text?: string | null
+          top_theme?: string | null
+          total_followers_gained?: number | null
+          total_likes?: number | null
+          total_posts?: number | null
+          total_reach?: number | null
+          total_reposts?: number | null
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
