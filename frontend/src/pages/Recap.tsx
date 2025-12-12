@@ -88,7 +88,14 @@ export default function Recap() {
     setSearchParams({ user: cleanHandle });
     
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      // Ensure the URL has a protocol (https:// or http://)
+      // If it's just a domain name, add https://
+      if (apiUrl && !apiUrl.match(/^https?:\/\//)) {
+        apiUrl = `https://${apiUrl}`;
+      }
+      
       console.log('Calling API at:', `${apiUrl}/api/recap`);
       
       const response = await fetch(`${apiUrl}/api/recap`, {
