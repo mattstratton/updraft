@@ -29,7 +29,16 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "finale";
+export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "topFans" | "topics" | "finale";
+
+interface TopFan {
+  handle: string;
+  displayName: string;
+  avatar: string;
+  likes: number;
+  reposts: number;
+  score: number;
+}
 
 interface StoryCardData {
   variant: CardVariant;
@@ -53,6 +62,11 @@ interface StoryCardData {
   topPostText?: string;
   topPostLikes?: number;
   topPostReposts?: number;
+  // Top fans
+  topFans?: TopFan[];
+  // Topics
+  topWords?: { word: string; count: number }[];
+  topBigrams?: { phrase: string; count: number }[];
 }
 
 interface StoryCardProps {
@@ -92,6 +106,14 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   streak: {
     title: "Consistency is everything",
     tagline: "You kept showing up.",
+  },
+  topFans: {
+    title: "Your biggest fans",
+    tagline: "The ones who showed up for you.",
+  },
+  topics: {
+    title: "What you talked about",
+    tagline: "The words that defined your year.",
   },
   finale: {
     title: "That was your year",
@@ -210,6 +232,88 @@ export function StoryCard({ data, className }: StoryCardProps) {
               </span>
               <p className="text-sm text-muted-foreground">days active this year</p>
             </div>
+          </div>
+        );
+
+      case "topFans":
+        return (
+          <div className="space-y-4 w-full">
+            {data.topFans && data.topFans.length > 0 ? (
+              data.topFans.slice(0, 5).map((fan, index) => (
+                <div key={fan.handle} className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-primary/60 w-6">
+                    {index + 1}
+                  </span>
+                  {fan.avatar ? (
+                    <img
+                      src={fan.avatar}
+                      alt={fan.displayName}
+                      className="w-10 h-10 rounded-full border border-border/50"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-muted-foreground text-sm">
+                        {fan.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-sm truncate">{fan.displayName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {fan.likes}❤️ {fan.reposts}🔁
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center">
+                No top fans data yet
+              </p>
+            )}
+          </div>
+        );
+
+      case "topics":
+        return (
+          <div className="space-y-6 w-full">
+            {data.topWords && data.topWords.length > 0 ? (
+              <>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {data.topWords.slice(0, 8).map((item, index) => (
+                    <span
+                      key={item.word}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm font-medium",
+                        index === 0 && "bg-primary text-primary-foreground text-base px-4 py-2",
+                        index === 1 && "bg-accent text-accent-foreground",
+                        index > 1 && "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {item.word}
+                    </span>
+                  ))}
+                </div>
+                {data.topBigrams && data.topBigrams.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">Common phrases</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {data.topBigrams.slice(0, 3).map((item) => (
+                        <span
+                          key={item.phrase}
+                          className="px-2 py-1 rounded bg-card border border-border/50 text-xs"
+                        >
+                          "{item.phrase}"
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">
+                Not enough data for topics
+              </p>
+            )}
           </div>
         );
 

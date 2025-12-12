@@ -9,6 +9,15 @@ import { toast } from "sonner";
 import { ArrowLeft, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface TopFan {
+  handle: string;
+  displayName: string;
+  avatar: string;
+  likes: number;
+  reposts: number;
+  score: number;
+}
+
 interface RecapData {
   profile: {
     handle: string;
@@ -38,12 +47,16 @@ interface RecapData {
     mostActiveDay: string;
     peakHour: number;
     longestStreak: number;
-    topWords: string[];
+  };
+  topFans: TopFan[];
+  topics: {
+    topWords: { word: string; count: number }[];
+    topBigrams: { phrase: string; count: number }[];
   };
   year: number;
 }
 
-const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "finale"];
+const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "topFans", "topics", "finale"];
 
 export default function Recap() {
   const [handle, setHandle] = useState("");
@@ -145,6 +158,9 @@ export default function Recap() {
       topPostText: recap.topPost?.text,
       topPostLikes: recap.topPost?.likes,
       topPostReposts: recap.topPost?.reposts,
+      topFans: recap.topFans,
+      topWords: recap.topics?.topWords,
+      topBigrams: recap.topics?.topBigrams,
     };
   };
 
