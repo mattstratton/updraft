@@ -19,31 +19,22 @@ RUN npm run build
 # Verify build output
 RUN ls -la /app/dist || echo "Build output not found!"
 
-# Production stage with nginx
-FROM nginx:alpine
+# Production stage - use same Node image, just serve the built files
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install serve (lightweight static file server)
+RUN npm install -g serve
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist ./dist
 
-# Verify files were copied and index.html exists
-RUN ls -la /usr/share/nginx/html && \
-    test -f /usr/share/nginx/html/index.html || (echo "ERROR: index.html not found!" && exit 1)
+# Expose port (Railway will set PORT env var)
+EXPOSE ${PORT:-3000}
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Test nginx config
-RUN nginx -t || (echo "ERROR: nginx config test failed!" && cat /etc/nginx/conf.d/default.conf && exit 1)
-
-# Ensure proper permissions
-RUN chmod -R 755 /usr/share/nginx/html
-
-# Copy startup script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-EXPOSE 80
-
-# Use startup script for better error visibility
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Use serve to serve the built app
+# -s flag enables SPA mode (all routes serve index.html)
+# -l flag sets the port from Railway's PORT env var
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]
 
