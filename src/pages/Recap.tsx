@@ -110,8 +110,8 @@ export default function Recap() {
 
   const handleShare = async () => {
     const appUrl = window.location.origin;
-    const userHandle = recap?.profile.handle || handle;
-    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nGet yours at ${appUrl}/recap?user=${userHandle}\n\n#Updraft #Bluesky`;
+    const userHandle = recap?.profile.handle?.replace(/^@/, "") || "";
+    const shareText = `Check out my ${recap?.year} Bluesky recap! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nSee mine and get your own at ${appUrl}/recap?user=${userHandle}\n\n#Updraft #Bluesky`;
     
     try {
       if (navigator.share) {
