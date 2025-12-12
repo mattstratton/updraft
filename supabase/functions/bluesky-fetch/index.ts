@@ -42,7 +42,7 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
   let cursor: string | undefined;
   const limit = 100;
   let iterations = 0;
-  const maxIterations = 20; // Safety limit to prevent infinite loops
+  const maxIterations = 20;
 
   console.log(`Fetching all posts for ${actor} from ${targetYear}`);
 
@@ -69,12 +69,8 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
     const data = await response.json();
     const posts = data.feed || [];
     
-    if (posts.length === 0) {
-      console.log("No more posts found");
-      break;
-    }
+    if (posts.length === 0) break;
 
-    // Filter for target year posts
     let foundOlderPost = false;
     for (const item of posts) {
       const createdAt = new Date(item.post.record?.createdAt);
@@ -83,7 +79,6 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
       if (postYear === targetYear) {
         allPosts.push(item);
       } else if (postYear < targetYear) {
-        // We've gone past the target year, stop fetching
         foundOlderPost = true;
         break;
       }
@@ -91,15 +86,48 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
 
     console.log(`Iteration ${iterations}: fetched ${posts.length} posts, ${allPosts.length} total from ${targetYear}`);
 
-    if (foundOlderPost || !data.cursor) {
-      break;
-    }
-
+    if (foundOlderPost || !data.cursor) break;
     cursor = data.cursor;
   }
 
   console.log(`Total posts fetched from ${targetYear}: ${allPosts.length}`);
   return allPosts;
+}
+
+async function getPostLikes(session: BlueskySession, uri: string, limit = 50) {
+  try {
+    const url = new URL(`${BLUESKY_API}/app.bsky.feed.getLikes`);
+    url.searchParams.set("uri", uri);
+    url.searchParams.set("limit", String(limit));
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${session.accessJwt}` },
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.likes || [];
+  } catch {
+    return [];
+  }
+}
+
+async function getPostReposts(session: BlueskySession, uri: string, limit = 50) {
+  try {
+    const url = new URL(`${BLUESKY_API}/app.bsky.feed.getRepostedBy`);
+    url.searchParams.set("uri", uri);
+    url.searchParams.set("limit", String(limit));
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${session.accessJwt}` },
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.repostedBy || [];
+  } catch {
+    return [];
+  }
 }
 
 async function getProfile(session: BlueskySession, actor: string) {
@@ -119,8 +147,140 @@ async function getProfile(session: BlueskySession, actor: string) {
   return response.json();
 }
 
-function analyzeRecap(posts: any[], profile: any, targetYear: number) {
-  // Filter to only user's own posts (not reposts)
+async function getTopFans(session: BlueskySession, posts: any[], profileDid: string) {
+  const fanCounts: Record<string, { 
+    handle: string; 
+    displayName: string; 
+    avatar: string; 
+    likes: number; 
+    reposts: number;
+  }> = {};
+
+  // Get interactions for top 15 posts by engagement
+  const sortedPosts = [...posts]
+    .sort((a, b) => {
+      const engA = (a.post.likeCount || 0) + (a.post.repostCount || 0);
+      const engB = (b.post.likeCount || 0) + (b.post.repostCount || 0);
+      return engB - engA;
+    })
+    .slice(0, 15);
+
+  console.log(`Fetching fans from top ${sortedPosts.length} posts`);
+
+  for (const item of sortedPosts) {
+    const uri = item.post.uri;
+    
+    const [likes, reposts] = await Promise.all([
+      getPostLikes(session, uri),
+      getPostReposts(session, uri),
+    ]);
+
+    for (const like of likes) {
+      const actor = like.actor;
+      if (actor.did === profileDid) continue; // Skip self
+      
+      if (!fanCounts[actor.did]) {
+        fanCounts[actor.did] = {
+          handle: actor.handle,
+          displayName: actor.displayName || actor.handle,
+          avatar: actor.avatar || "",
+          likes: 0,
+          reposts: 0,
+        };
+      }
+      fanCounts[actor.did].likes++;
+    }
+
+    for (const reposter of reposts) {
+      if (reposter.did === profileDid) continue;
+      
+      if (!fanCounts[reposter.did]) {
+        fanCounts[reposter.did] = {
+          handle: reposter.handle,
+          displayName: reposter.displayName || reposter.handle,
+          avatar: reposter.avatar || "",
+          likes: 0,
+          reposts: 0,
+        };
+      }
+      fanCounts[reposter.did].reposts++;
+    }
+  }
+
+  // Sort by total interactions (reposts weighted higher)
+  const topFans = Object.values(fanCounts)
+    .map(fan => ({
+      ...fan,
+      score: fan.likes + fan.reposts * 2,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  console.log(`Found ${topFans.length} top fans`);
+  return topFans;
+}
+
+function analyzeTopics(posts: any[]) {
+  // Common words to exclude
+  const stopWords = new Set([
+    'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with',
+    'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her',
+    'she', 'or', 'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what', 'so', 'up',
+    'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me', 'when', 'make', 'can', 'like', 'time',
+    'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 'some', 'could',
+    'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think',
+    'also', 'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way', 'even',
+    'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'us', 'very', 'really', 'been',
+    'being', 'dont', 'much', 'here', 'got', 'going', 'thing', 'yeah', 'right', 'still', 'though',
+    'https', 'http', 'www', 'com', 'bsky', 'social'
+  ]);
+
+  const wordCounts: Record<string, number> = {};
+  const bigramCounts: Record<string, number> = {};
+
+  posts.forEach((item: any) => {
+    const text = (item.post.record?.text || "").toLowerCase();
+    // Remove URLs
+    const cleanText = text.replace(/https?:\/\/[^\s]+/g, '');
+    const words = cleanText.split(/\s+/).filter((w: string) => {
+      const cleaned = w.replace(/[^a-z]/g, '');
+      return cleaned.length > 3 && !stopWords.has(cleaned);
+    }).map((w: string) => w.replace(/[^a-z]/g, ''));
+
+    // Count single words
+    words.forEach((word: string) => {
+      if (word.length > 3) {
+        wordCounts[word] = (wordCounts[word] || 0) + 1;
+      }
+    });
+
+    // Count bigrams (two-word phrases)
+    for (let i = 0; i < words.length - 1; i++) {
+      if (words[i].length > 3 && words[i + 1].length > 3) {
+        const bigram = `${words[i]} ${words[i + 1]}`;
+        bigramCounts[bigram] = (bigramCounts[bigram] || 0) + 1;
+      }
+    }
+  });
+
+  // Get top words
+  const topWords = Object.entries(wordCounts)
+    .filter(([_, count]) => count >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([word, count]) => ({ word, count }));
+
+  // Get top bigrams that appear at least twice
+  const topBigrams = Object.entries(bigramCounts)
+    .filter(([_, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([phrase, count]) => ({ phrase, count }));
+
+  return { topWords, topBigrams };
+}
+
+async function analyzeRecap(session: BlueskySession, posts: any[], profile: any, targetYear: number) {
   const ownPosts = posts.filter((item: any) => item.post.author.did === profile.did);
 
   const totalPosts = ownPosts.length;
@@ -128,32 +288,21 @@ function analyzeRecap(posts: any[], profile: any, targetYear: number) {
   const totalReposts = ownPosts.reduce((sum: number, item: any) => sum + (item.post.repostCount || 0), 0);
   const totalReplies = ownPosts.reduce((sum: number, item: any) => sum + (item.post.replyCount || 0), 0);
 
-  // Find top posts by different metrics
-  let topPostByLikes = ownPosts[0];
   let topPostByEngagement = ownPosts[0];
-  let maxLikes = 0;
   let maxEngagement = 0;
 
   ownPosts.forEach((item: any) => {
-    const likes = item.post.likeCount || 0;
-    const engagement = likes + (item.post.repostCount || 0) * 2 + (item.post.replyCount || 0);
-    
-    if (likes > maxLikes) {
-      maxLikes = likes;
-      topPostByLikes = item;
-    }
+    const engagement = (item.post.likeCount || 0) + (item.post.repostCount || 0) * 2 + (item.post.replyCount || 0);
     if (engagement > maxEngagement) {
       maxEngagement = engagement;
       topPostByEngagement = item;
     }
   });
 
-  // Analyze posting patterns
+  // Patterns
   const monthCounts: Record<string, number> = {};
   const dayCounts: Record<string, number> = {};
   const hourCounts: Record<number, number> = {};
-  
-  // Calculate streaks
   const postDates = new Set<string>();
   
   ownPosts.forEach((item: any) => {
@@ -173,7 +322,7 @@ function analyzeRecap(posts: any[], profile: any, targetYear: number) {
   const mostActiveDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
   const peakHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "12";
 
-  // Calculate longest streak
+  // Longest streak
   const sortedDates = Array.from(postDates).sort();
   let longestStreak = 0;
   let currentStreak = 1;
@@ -192,25 +341,14 @@ function analyzeRecap(posts: any[], profile: any, targetYear: number) {
   }
   longestStreak = Math.max(longestStreak, currentStreak);
 
-  // Calculate average engagement per post
   const avgEngagement = totalPosts > 0 ? Math.round((totalLikes + totalReposts + totalReplies) / totalPosts) : 0;
 
-  // Find most used words/themes (simple word frequency)
-  const wordCounts: Record<string, number> = {};
-  ownPosts.forEach((item: any) => {
-    const text = item.post.record?.text || "";
-    const words = text.toLowerCase().split(/\s+/).filter((w: string) => w.length > 4);
-    words.forEach((word: string) => {
-      const cleaned = word.replace(/[^a-z]/g, '');
-      if (cleaned.length > 4) {
-        wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
-      }
-    });
-  });
-  const topWords = Object.entries(wordCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([word]) => word);
+  // Get top fans and topics
+  console.log("Analyzing top fans...");
+  const topFans = await getTopFans(session, ownPosts, profile.did);
+  
+  console.log("Analyzing topics...");
+  const topics = analyzeTopics(ownPosts);
 
   return {
     profile: {
@@ -236,17 +374,14 @@ function analyzeRecap(posts: any[], profile: any, targetYear: number) {
       replies: topPostByEngagement.post.replyCount || 0,
       uri: topPostByEngagement.post.uri,
     } : null,
-    topPostByLikes: topPostByLikes ? {
-      text: topPostByLikes.post.record?.text || "",
-      likes: topPostByLikes.post.likeCount || 0,
-    } : null,
     patterns: {
       mostActiveMonth,
       mostActiveDay,
       peakHour: parseInt(peakHour),
       longestStreak,
-      topWords,
     },
+    topFans,
+    topics,
     year: targetYear,
   };
 }
@@ -278,7 +413,7 @@ serve(async (req) => {
       getProfile(session, handle),
     ]);
 
-    const recap = analyzeRecap(posts, profile, currentYear);
+    const recap = await analyzeRecap(session, posts, profile, currentYear);
 
     return new Response(JSON.stringify(recap), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
