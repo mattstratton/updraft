@@ -94,39 +94,61 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
   return allPosts;
 }
 
-async function getPostLikes(session: BlueskySession, uri: string, limit = 50) {
+async function getPostLikes(session: BlueskySession, uri: string, limit = 100) {
+  const allLikes: any[] = [];
+  let cursor: string | undefined;
+  
   try {
-    const url = new URL(`${BLUESKY_API}/app.bsky.feed.getLikes`);
-    url.searchParams.set("uri", uri);
-    url.searchParams.set("limit", String(limit));
+    // Fetch up to 2 pages of likes
+    for (let i = 0; i < 2; i++) {
+      const url = new URL(`${BLUESKY_API}/app.bsky.feed.getLikes`);
+      url.searchParams.set("uri", uri);
+      url.searchParams.set("limit", String(limit));
+      if (cursor) url.searchParams.set("cursor", cursor);
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${session.accessJwt}` },
-    });
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${session.accessJwt}` },
+      });
 
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.likes || [];
+      if (!response.ok) break;
+      const data = await response.json();
+      allLikes.push(...(data.likes || []));
+      
+      if (!data.cursor) break;
+      cursor = data.cursor;
+    }
+    return allLikes;
   } catch {
-    return [];
+    return allLikes;
   }
 }
 
-async function getPostReposts(session: BlueskySession, uri: string, limit = 50) {
+async function getPostReposts(session: BlueskySession, uri: string, limit = 100) {
+  const allReposts: any[] = [];
+  let cursor: string | undefined;
+  
   try {
-    const url = new URL(`${BLUESKY_API}/app.bsky.feed.getRepostedBy`);
-    url.searchParams.set("uri", uri);
-    url.searchParams.set("limit", String(limit));
+    // Fetch up to 2 pages of reposts
+    for (let i = 0; i < 2; i++) {
+      const url = new URL(`${BLUESKY_API}/app.bsky.feed.getRepostedBy`);
+      url.searchParams.set("uri", uri);
+      url.searchParams.set("limit", String(limit));
+      if (cursor) url.searchParams.set("cursor", cursor);
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${session.accessJwt}` },
-    });
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${session.accessJwt}` },
+      });
 
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.repostedBy || [];
+      if (!response.ok) break;
+      const data = await response.json();
+      allReposts.push(...(data.repostedBy || []));
+      
+      if (!data.cursor) break;
+      cursor = data.cursor;
+    }
+    return allReposts;
   } catch {
-    return [];
+    return allReposts;
   }
 }
 
@@ -156,14 +178,14 @@ async function getTopFans(session: BlueskySession, posts: any[], profileDid: str
     reposts: number;
   }> = {};
 
-  // Get interactions for top 15 posts by engagement
+  // Get interactions for top 50 posts by engagement to capture more fan data
   const sortedPosts = [...posts]
     .sort((a, b) => {
       const engA = (a.post.likeCount || 0) + (a.post.repostCount || 0);
       const engB = (b.post.likeCount || 0) + (b.post.repostCount || 0);
       return engB - engA;
     })
-    .slice(0, 15);
+    .slice(0, 50);
 
   console.log(`Fetching fans from top ${sortedPosts.length} posts`);
 
