@@ -296,18 +296,61 @@ async function getTopFans(session: BlueskySession, posts: any[], profileDid: str
 }
 
 function analyzeTopics(posts: any[]) {
-  // Common words to exclude
+  // Comprehensive list of common words to exclude
   const stopWords = new Set([
-    'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with',
-    'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her',
-    'she', 'or', 'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what', 'so', 'up',
-    'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me', 'when', 'make', 'can', 'like', 'time',
-    'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 'some', 'could',
-    'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think',
-    'also', 'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way', 'even',
-    'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'us', 'very', 'really', 'been',
-    'being', 'dont', 'much', 'here', 'got', 'going', 'thing', 'yeah', 'right', 'still', 'though',
-    'https', 'http', 'www', 'com', 'bsky', 'social'
+    // Articles and basic words
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from',
+    'as', 'is', 'was', 'are', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'cant', 'cannot',
+    
+    // Pronouns
+    'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'this', 'that',
+    'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
+    
+    // Common verbs
+    'get', 'got', 'go', 'goes', 'went', 'gone', 'come', 'comes', 'came', 'see', 'saw', 'seen', 'know', 'knew', 'known',
+    'think', 'thinks', 'thought', 'say', 'says', 'said', 'tell', 'tells', 'told', 'make', 'makes', 'made',
+    'take', 'takes', 'took', 'taken', 'give', 'gives', 'gave', 'given', 'use', 'uses', 'used', 'want', 'wants', 'wanted',
+    'need', 'needs', 'needed', 'try', 'tries', 'tried', 'look', 'looks', 'looked', 'find', 'finds', 'found',
+    'work', 'works', 'worked', 'play', 'plays', 'played', 'call', 'calls', 'called', 'ask', 'asks', 'asked',
+    
+    // Common adjectives/adverbs
+    'more', 'most', 'much', 'many', 'some', 'any', 'all', 'both', 'each', 'every', 'few', 'little', 'less', 'least',
+    'very', 'really', 'quite', 'too', 'so', 'just', 'only', 'even', 'still', 'also', 'already', 'yet', 'again',
+    'good', 'better', 'best', 'bad', 'worse', 'worst', 'big', 'small', 'large', 'long', 'short', 'high', 'low',
+    'new', 'old', 'young', 'first', 'last', 'next', 'same', 'different', 'other', 'another',
+    'right', 'wrong', 'true', 'false', 'sure', 'maybe', 'probably', 'actually', 'really',
+    
+    // Common nouns (generic)
+    'thing', 'things', 'stuff', 'way', 'ways', 'time', 'times', 'day', 'days', 'year', 'years', 'week', 'weeks',
+    'month', 'months', 'people', 'person', 'man', 'men', 'woman', 'women', 'child', 'children',
+    'place', 'places', 'part', 'parts', 'kind', 'kinds', 'sort', 'sorts', 'type', 'types',
+    'life', 'world', 'house', 'home', 'school', 'work', 'job', 'money', 'car', 'food', 'water',
+    
+    // Prepositions and conjunctions
+    'about', 'above', 'across', 'after', 'against', 'along', 'among', 'around', 'before', 'behind', 'below',
+    'beneath', 'beside', 'between', 'beyond', 'during', 'except', 'inside', 'into', 'near', 'outside', 'over',
+    'since', 'through', 'throughout', 'toward', 'towards', 'under', 'until', 'upon', 'within', 'without',
+    'than', 'then', 'when', 'where', 'while', 'why', 'how', 'what', 'which', 'who', 'whom', 'whose',
+    
+    // Contractions and common variations
+    'dont', 'doesnt', 'didnt', 'wont', 'wouldnt', 'couldnt', 'shouldnt', 'cant', 'isnt', 'arent', 'wasnt', 'werent',
+    'havent', 'hasnt', 'hadnt', 'isnt', 'arent', 'wasnt', 'werent', 'thats', 'thats', 'theres', 'heres', 'wheres',
+    'whos', 'whats', 'hows', 'whys', 'whens', 'wheres',
+    
+    // Common filler words
+    'yeah', 'yep', 'nope', 'ok', 'okay', 'yes', 'no', 'maybe', 'perhaps', 'probably', 'definitely',
+    'um', 'uh', 'ah', 'oh', 'well', 'hmm', 'huh',
+    
+    // Social media specific
+    'https', 'http', 'www', 'com', 'bsky', 'social', 'twitter', 'x', 'facebook', 'instagram',
+    
+    // Numbers (as words)
+    'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'first', 'second', 'third',
+    
+    // Common phrases that aren't meaningful
+    'back', 'here', 'there', 'where', 'everywhere', 'nowhere', 'somewhere', 'anywhere',
+    'up', 'down', 'out', 'off', 'away', 'back', 'forward', 'ahead', 'behind',
   ]);
 
   const wordCounts: Record<string, number> = {};
@@ -315,24 +358,40 @@ function analyzeTopics(posts: any[]) {
 
   posts.forEach((item: any) => {
     const text = (item.post.record?.text || "").toLowerCase();
-    // Remove URLs
-    const cleanText = text.replace(/https?:\/\/[^\s]+/g, '');
-    const words = cleanText.split(/\s+/).filter((w: string) => {
-      const cleaned = w.replace(/[^a-z]/g, '');
-      return cleaned.length > 3 && !stopWords.has(cleaned);
-    }).map((w: string) => w.replace(/[^a-z]/g, ''));
+    // Remove URLs, mentions, and hashtags
+    const cleanText = text
+      .replace(/https?:\/\/[^\s]+/g, '') // Remove URLs
+      .replace(/@\w+/g, '') // Remove mentions
+      .replace(/#\w+/g, '') // Remove hashtags
+      .replace(/['"]/g, ' '); // Replace quotes with spaces
+    
+    const words = cleanText.split(/\s+/)
+      .map((w: string) => w.replace(/[^a-z]/g, '')) // Remove non-letters
+      .filter((w: string) => {
+        // Filter out: empty, too short, stop words, and common patterns
+        if (!w || w.length < 4) return false;
+        if (stopWords.has(w)) return false;
+        // Filter out words that are just numbers or common patterns
+        if (/^\d+$/.test(w)) return false;
+        if (w.length < 4) return false;
+        return true;
+      });
 
     // Count single words
     words.forEach((word: string) => {
-      if (word.length > 3) {
+      if (word.length >= 4 && !stopWords.has(word)) {
         wordCounts[word] = (wordCounts[word] || 0) + 1;
       }
     });
 
-    // Count bigrams (two-word phrases)
+    // Count bigrams (two-word phrases) - only if both words are meaningful
     for (let i = 0; i < words.length - 1; i++) {
-      if (words[i].length > 3 && words[i + 1].length > 3) {
-        const bigram = `${words[i]} ${words[i + 1]}`;
+      const word1 = words[i];
+      const word2 = words[i + 1];
+      if (word1 && word2 && 
+          word1.length >= 4 && word2.length >= 4 && 
+          !stopWords.has(word1) && !stopWords.has(word2)) {
+        const bigram = `${word1} ${word2}`;
         bigramCounts[bigram] = (bigramCounts[bigram] || 0) + 1;
       }
     }
