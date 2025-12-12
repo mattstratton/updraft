@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: updraft-backend-dev
+    ports:
+      - "${BACKEND_PORT:-3002}:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    env_file:
+      - ./server/.env.local
+    volumes:
+      - ./server/src:/app/src
+      - ./server:/app
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: updraft-frontend-dev
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    environment:
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-3002}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend
+    restart: unless-stopped
+

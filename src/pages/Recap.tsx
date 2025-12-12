@@ -4,9 +4,8 @@ import { Input } from "@/components/ui/input";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
 import { StoryCard, CardVariant } from "@/components/RecapCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 interface TopFan {
@@ -54,6 +53,7 @@ interface RecapData {
     topBigrams: { phrase: string; count: number }[];
   };
   year: number;
+  truncated?: boolean;
 }
 
 const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "topFans", "topics", "finale"];
@@ -88,12 +88,33 @@ export default function Recap() {
     setSearchParams({ user: cleanHandle });
     
     try {
-      const { data, error } = await supabase.functions.invoke("bluesky-fetch", {
-        body: { handle: cleanHandle },
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/recap`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ handle: cleanHandle }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errorData.error || `Failed to fetch recap: ${response.status}`);
+      }
+
+      const data = await response.json();
+
       if (data.error) throw new Error(data.error);
+
+      // Log debug info if available
+      if (data._debug) {
+        console.log("📊 Fetch Debug Info:", {
+          totalPostsFetched: data._debug.totalPostsFetched,
+          totalPostsAfterFilter: data._debug.totalPostsAfterFilter,
+          iterations: data._debug.iterations,
+          maxIterations: data._debug.maxIterations,
+        });
+      }
 
       setRecap(data);
       toast.success(`Your ${data.year} recap is ready!`);
@@ -111,7 +132,7 @@ export default function Recap() {
   const handleShare = async () => {
     const appUrl = window.location.origin;
     const userHandle = recap?.profile.handle?.replace(/^@/, "") || "";
-    const shareText = `Check out my ${recap?.year} Bluesky recap! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nSee mine and get your own at ${appUrl}/recap?user=${userHandle}\n\n#Updraft #Bluesky`;
+    const shareText = `Check out my ${recap?.year} Bluesky recap! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nSee mine and get your own at ${appUrl}/recap?user=${userHandle}\n\n#Updraft${recap?.year || '2025'}`;
     
     try {
       if (navigator.share) {
@@ -213,6 +234,18 @@ export default function Recap() {
 
         {/* Main content */}
         <main className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
+          {/* Truncation warning */}
+          {recap.truncated && (
+            <div className="w-full max-w-md mb-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p className="text-sm">
+                  <span className="font-medium">Wow, you're a posting machine! 🌬️</span> With over 10,000 posts this year, we've captured a sample of your incredible activity. The stats shown reflect this subset.
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Card carousel */}
           <div className="relative w-full max-w-md">
             {/* Navigation arrows */}

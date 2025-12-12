@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: updraft-backend
+    ports:
+      - "${BACKEND_PORT:-3002}:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - BLUESKY_IDENTIFIER=${BLUESKY_IDENTIFIER}
+      - BLUESKY_APP_PASSWORD=${BLUESKY_APP_PASSWORD}
+    env_file:
+      - server/.env.local
+    volumes:
+      - ./server/src:/app/src
+      - ./server/tsconfig.json:/app/tsconfig.json
+    command: npm run dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:${BACKEND_PORT:-3002}
+    container_name: updraft-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+

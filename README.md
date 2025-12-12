@@ -1,73 +1,154 @@
-# Welcome to your Lovable project
+# Updraft — Your Year on Bluesky, Lifted
 
-## Project info
+A beautiful, shareable recap of your posts, follows, and moments from the past year on Bluesky. No tracking. No posting. Just your data.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Architecture
 
-## How can I edit this code?
+This is a **full-stack application** with:
+- **Frontend**: React + Vite (served via Nginx in production)
+- **Backend**: Express API server
 
-There are several ways of editing your application.
+Both services are containerized with Docker and can be deployed to Railway.
 
-**Use Lovable**
+## Local Development with Docker
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Prerequisites
+- Docker and Docker Compose installed
+- Bluesky app password ([get one here](https://bsky.app/settings/app-passwords))
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Quick Start
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Step 1: Clone the repository
 git clone <YOUR_GIT_URL>
+cd updraft
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Step 2: Set up environment variables
+cp server/.env.example server/.env.local
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Edit server/.env.local with your Bluesky credentials:
+# - BLUESKY_IDENTIFIER=your.handle.bsky.social
+# - BLUESKY_APP_PASSWORD=your-app-password
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 3: Start everything with Docker Compose
+docker-compose -f docker-compose.dev.yml up --build
+
+# The app will be available at:
+# - Frontend: http://localhost:8080
+# - Backend API: http://localhost:3002 (default, or set BACKEND_PORT env var)
+
+# If port 3002 is also in use, you can change it:
+# BACKEND_PORT=3003 docker-compose -f docker-compose.dev.yml up --build
+```
+
+### Docker Commands
+
+```sh
+# Start services
+docker-compose -f docker-compose.dev.yml up
+
+# Start in background
+docker-compose -f docker-compose.dev.yml up -d
+
+# Stop services
+docker-compose -f docker-compose.dev.yml down
+
+# View logs
+docker-compose -f docker-compose.dev.yml logs -f
+
+# Rebuild containers
+docker-compose -f docker-compose.dev.yml up --build
+
+# Clean up (remove containers, volumes)
+docker-compose -f docker-compose.dev.yml down -v
+```
+
+## Local Development (Without Docker)
+
+If you prefer to run without Docker:
+
+```sh
+# Terminal 1: Start backend
+cd server
+npm install
+npm run dev
+
+# Terminal 2: Start frontend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Deployment to Railway
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend Service
 
-**Use GitHub Codespaces**
+1. **Create a Railway account** at [railway.app](https://railway.app)
+2. **Create a new project** and connect your GitHub repository
+3. **Add a new service** → "Deploy from GitHub repo"
+4. **Configure the service**:
+   - Root Directory: `server`
+   - Dockerfile Path: `server/Dockerfile`
+5. **Set environment variables**:
+   - `BLUESKY_IDENTIFIER` - Your Bluesky handle
+   - `BLUESKY_APP_PASSWORD` - Your Bluesky app password
+   - `PORT` - Railway sets this automatically
+6. **Deploy** - Railway will automatically deploy on push
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Railway will provide a URL like `https://your-backend.up.railway.app`
 
-## What technologies are used for this project?
+### Frontend Service
 
-This project is built with:
+1. **Add another service** in the same Railway project
+2. **Configure the service**:
+   - Root Directory: `.` (root)
+   - Dockerfile Path: `Dockerfile`
+   - Build Command: (not needed, Docker handles it)
+3. **Set environment variables**:
+   - `VITE_API_URL` - Your backend URL (e.g., `https://your-backend.up.railway.app`)
+4. **Deploy** - Railway will automatically deploy on push
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Railway Service Communication
 
-## How can I deploy this project?
+Railway services in the same project can communicate using service names. Update your frontend's `VITE_API_URL` to use the backend service's Railway-provided URL, or use Railway's private networking if both services are in the same project.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Project Structure
 
-## Can I connect a custom domain to my Lovable project?
+```
+updraft/
+├── server/              # Express backend API
+│   ├── src/
+│   │   ├── index.ts    # Server entry point
+│   │   ├── routes/     # API routes
+│   │   └── services/   # Bluesky API service
+│   ├── Dockerfile
+│   └── package.json
+├── src/                 # React frontend
+│   ├── components/
+│   ├── pages/
+│   └── ...
+├── Dockerfile           # Frontend production Dockerfile
+├── Dockerfile.dev       # Frontend development Dockerfile
+├── docker-compose.yml   # Production Docker Compose
+├── docker-compose.dev.yml # Development Docker Compose
+└── package.json
+```
 
-Yes, you can!
+## Technologies
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Frontend**: Vite, React, TypeScript, shadcn-ui, Tailwind CSS, Nginx
+- **Backend**: Express, TypeScript, Node.js
+- **Deployment**: Railway, Docker
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Environment Variables
+
+### Backend (`server/.env.local`)
+- `BLUESKY_IDENTIFIER` - Your Bluesky handle
+- `BLUESKY_APP_PASSWORD` - Your Bluesky app password
+- `PORT` - Server port (default: 3001)
+
+### Frontend (build-time)
+- `VITE_API_URL` - Backend API URL (default: `http://localhost:3001`)
+
+## Social Media Preview Images
+
+To update the Open Graph and Twitter card images, add an `og-image.png` file (1200x630px recommended) to the `public/` directory.
