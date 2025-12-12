@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
@@ -7,7 +7,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Share2, ChevronLeft, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 interface TopFan {
   handle: string;
@@ -59,22 +59,37 @@ interface RecapData {
 const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "topFans", "topics", "finale"];
 
 export default function Recap() {
-  const [handle, setHandle] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [handle, setHandle] = useState(searchParams.get("user") || "");
   const [isLoading, setIsLoading] = useState(false);
   const [recap, setRecap] = useState<RecapData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handleFetchRecap = async () => {
-    if (!handle.trim()) {
+  // Auto-fetch if user param is present
+  useEffect(() => {
+    const userParam = searchParams.get("user");
+    if (userParam && !recap && !isLoading) {
+      setHandle(userParam);
+      fetchRecap(userParam);
+    }
+  }, []);
+
+  const fetchRecap = async (userHandle: string) => {
+    const cleanHandle = userHandle.trim().replace("@", "");
+    if (!cleanHandle) {
       toast.error("Please enter a Bluesky handle");
       return;
     }
 
     setIsLoading(true);
     setCurrentIndex(0);
+    
+    // Update URL with user param
+    setSearchParams({ user: cleanHandle });
+    
     try {
       const { data, error } = await supabase.functions.invoke("bluesky-fetch", {
-        body: { handle: handle.trim().replace("@", "") },
+        body: { handle: cleanHandle },
       });
 
       if (error) throw error;
@@ -91,9 +106,12 @@ export default function Recap() {
     }
   };
 
+  const handleFetchRecap = () => fetchRecap(handle);
+
   const handleShare = async () => {
     const appUrl = window.location.origin;
-    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nGet yours at ${appUrl}/recap\n\n#Updraft #Bluesky`;
+    const userHandle = recap?.profile.handle || handle;
+    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nGet yours at ${appUrl}/recap?user=${userHandle}\n\n#Updraft #Bluesky`;
     
     try {
       if (navigator.share) {
@@ -176,7 +194,10 @@ export default function Recap() {
         {/* Header */}
         <header className="flex items-center justify-between p-4 sm:p-6">
           <button
-            onClick={() => setRecap(null)}
+            onClick={() => {
+              setRecap(null);
+              setSearchParams({});
+            }}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
