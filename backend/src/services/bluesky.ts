@@ -35,7 +35,7 @@ async function createSession(): Promise<BlueskySession> {
     throw new Error(`Failed to authenticate with Bluesky: ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<BlueskySession>;
 }
 
 async function getAllAuthorPosts(session: BlueskySession, actor: string, targetYear: number) {
@@ -73,7 +73,7 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
       throw new Error(`Failed to fetch feed: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { feed?: any[]; cursor?: string };
     const posts = data.feed || [];
     
     if (posts.length === 0) {
@@ -163,7 +163,7 @@ async function getPostLikes(session: BlueskySession, uri: string, limit = 100) {
       });
 
       if (!response.ok) break;
-      const data = await response.json();
+      const data = await response.json() as { likes?: any[]; cursor?: string };
       allLikes.push(...(data.likes || []));
       
       if (!data.cursor) break;
@@ -192,7 +192,7 @@ async function getPostReposts(session: BlueskySession, uri: string, limit = 100)
       });
 
       if (!response.ok) break;
-      const data = await response.json();
+      const data = await response.json() as { repostedBy?: any[]; cursor?: string };
       allReposts.push(...(data.repostedBy || []));
       
       if (!data.cursor) break;
@@ -218,7 +218,7 @@ async function getProfile(session: BlueskySession, actor: string) {
     throw new Error(`Failed to fetch profile: ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<any>;
 }
 
 async function getTopFans(session: BlueskySession, posts: any[], profileDid: string) {
