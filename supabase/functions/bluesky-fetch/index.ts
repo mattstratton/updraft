@@ -42,7 +42,7 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
   let cursor: string | undefined;
   const limit = 100;
   let iterations = 0;
-  const maxIterations = 20;
+  const maxIterations = 30; // Increased to fetch more posts
 
   console.log(`Fetching all posts for ${actor} from ${targetYear}`);
 
@@ -51,7 +51,8 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
     const url = new URL(`${BLUESKY_API}/app.bsky.feed.getAuthorFeed`);
     url.searchParams.set("actor", actor);
     url.searchParams.set("limit", String(limit));
-    url.searchParams.set("filter", "posts_no_replies");
+    // Include replies to get full post count
+    url.searchParams.set("filter", "posts_with_replies");
     if (cursor) {
       url.searchParams.set("cursor", cursor);
     }
@@ -71,20 +72,24 @@ async function getAllAuthorPosts(session: BlueskySession, actor: string, targetY
     
     if (posts.length === 0) break;
 
+    let postsFromYear = 0;
     let foundOlderPost = false;
+    
     for (const item of posts) {
       const createdAt = new Date(item.post.record?.createdAt);
       const postYear = createdAt.getFullYear();
       
       if (postYear === targetYear) {
         allPosts.push(item);
+        postsFromYear++;
       } else if (postYear < targetYear) {
         foundOlderPost = true;
         break;
       }
+      // Posts from future years (shouldn't happen) are skipped
     }
 
-    console.log(`Iteration ${iterations}: fetched ${posts.length} posts, ${allPosts.length} total from ${targetYear}`);
+    console.log(`Iteration ${iterations}: fetched ${posts.length} posts, ${postsFromYear} from ${targetYear}, ${allPosts.length} total`);
 
     if (foundOlderPost || !data.cursor) break;
     cursor = data.cursor;
