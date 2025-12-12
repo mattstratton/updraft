@@ -2,9 +2,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build argument for API URL (defaults to localhost for local dev)
+# Build argument for API URL
+# Railway will pass this as a build argument from environment variables
 ARG VITE_API_URL=http://localhost:3001
 ENV VITE_API_URL=$VITE_API_URL
+
+# Debug: Print the API URL being used (will show in build logs)
+RUN echo "Building with VITE_API_URL=${VITE_API_URL}"
 
 # Copy package files
 COPY package*.json ./
