@@ -72,10 +72,11 @@ async function getProfile(session: BlueskySession, actor: string) {
 }
 
 function analyzeRecap(feed: any[], profile: any) {
+  const currentYear = new Date().getFullYear();
   const posts = feed.filter((item: any) => {
     const post = item.post;
     const createdAt = new Date(post.record?.createdAt);
-    return createdAt.getFullYear() === 2024 && post.author.did === profile.did;
+    return createdAt.getFullYear() === currentYear && post.author.did === profile.did;
   });
 
   const totalPosts = posts.length;
@@ -134,7 +135,7 @@ function analyzeRecap(feed: any[], profile: any) {
       mostActiveMonth,
       mostActiveDay,
     },
-    year: 2024,
+    year: currentYear,
   };
 }
 
