@@ -366,7 +366,7 @@ export function StoryCard({ data, className }: StoryCardProps) {
           <div className="flex flex-col items-center gap-1">
             <UpdraftLogo size="sm" className="opacity-70" />
             <p className="text-xs text-muted-foreground/50">
-              updraft.app · @{handle}
+              updraft-app.com · @{handle}
             </p>
           </div>
         </div>
