@@ -38,8 +38,12 @@ RUN nginx -t || (echo "ERROR: nginx config test failed!" && cat /etc/nginx/conf.
 # Ensure proper permissions
 RUN chmod -R 755 /usr/share/nginx/html
 
+# Copy startup script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Use startup script for better error visibility
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
