@@ -33,9 +33,13 @@ RUN ls -la /usr/share/nginx/html && \
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Test nginx config
-RUN nginx -t || (echo "ERROR: nginx config test failed!" && exit 1)
+RUN nginx -t || (echo "ERROR: nginx config test failed!" && cat /etc/nginx/conf.d/default.conf && exit 1)
+
+# Ensure proper permissions
+RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
 
