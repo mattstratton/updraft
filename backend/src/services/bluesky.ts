@@ -151,8 +151,8 @@ async function getPostLikes(session: BlueskySession, uri: string, limit = 100) {
   let cursor: string | undefined;
   
   try {
-    // Fetch up to 1 page of likes (100 items) to balance speed and data
-    for (let i = 0; i < 1; i++) {
+    // Fetch up to 3 pages of likes (300 items) to get more comprehensive data
+    for (let i = 0; i < 3; i++) {
       const url = new URL(`${BLUESKY_API}/app.bsky.feed.getLikes`);
       url.searchParams.set("uri", uri);
       url.searchParams.set("limit", String(limit));
@@ -180,8 +180,8 @@ async function getPostReposts(session: BlueskySession, uri: string, limit = 100)
   let cursor: string | undefined;
   
   try {
-    // Fetch up to 1 page of reposts (100 items) to balance speed and data
-    for (let i = 0; i < 1; i++) {
+    // Fetch up to 3 pages of reposts (300 items) to get more comprehensive data
+    for (let i = 0; i < 3; i++) {
       const url = new URL(`${BLUESKY_API}/app.bsky.feed.getRepostedBy`);
       url.searchParams.set("uri", uri);
       url.searchParams.set("limit", String(limit));
@@ -230,15 +230,15 @@ async function getTopFans(session: BlueskySession, posts: any[], profileDid: str
     reposts: number;
   }> = {};
 
-  // Get interactions for top 20 posts by engagement to balance speed and accuracy
-  // Reduced from 50 to avoid timeouts for very active users
+  // Get interactions for top 50 posts by engagement to get more comprehensive fan data
+  // This analyzes more posts to capture fans who engage across multiple posts
   const sortedPosts = [...posts]
     .sort((a, b) => {
       const engA = (a.post.likeCount || 0) + (a.post.repostCount || 0);
       const engB = (b.post.likeCount || 0) + (b.post.repostCount || 0);
       return engB - engA;
     })
-    .slice(0, 20);
+    .slice(0, 50);
 
   console.log(`Fetching fans from top ${sortedPosts.length} posts`);
 
