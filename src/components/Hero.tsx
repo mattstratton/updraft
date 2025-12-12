@@ -37,7 +37,7 @@ export function Hero() {
         {/* CTAs */}
         <div className="opacity-0 animate-fade-in-delay-4 mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button variant="hero" size="xl" asChild>
-            <Link to="/auth">See your Updraft</Link>
+            <Link to="/recap">See your Updraft</Link>
           </Button>
         </div>
         
