@@ -25,11 +25,15 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Verify files were copied
-RUN ls -la /usr/share/nginx/html || echo "Files not found in nginx html directory!"
+# Verify files were copied and index.html exists
+RUN ls -la /usr/share/nginx/html && \
+    test -f /usr/share/nginx/html/index.html || (echo "ERROR: index.html not found!" && exit 1)
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Test nginx config
+RUN nginx -t || (echo "ERROR: nginx config test failed!" && exit 1)
 
 EXPOSE 80
 
