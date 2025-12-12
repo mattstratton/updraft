@@ -1,96 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Updraft Design System - Soft sky, airy, trust-building */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Core Palette - Soft sky blue, near-black ink, warm off-white */
+    --background: 210 40% 98%;
+    --foreground: 220 25% 10%;
+    
+    --card: 210 40% 99%;
+    --card-foreground: 220 25% 10%;
+    
+    --popover: 210 40% 99%;
+    --popover-foreground: 220 25% 10%;
+    
+    /* Primary - Soft periwinkle sky blue */
+    --primary: 220 70% 55%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Warm off-white / pale sunlight */
+    --secondary: 45 40% 96%;
+    --secondary-foreground: 220 25% 15%;
+    
+    --muted: 210 30% 94%;
+    --muted-foreground: 220 15% 45%;
+    
+    /* Accent - Sky blue lighter variant */
+    --accent: 200 80% 92%;
+    --accent-foreground: 220 70% 40%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 210 25% 90%;
+    --input: 210 25% 90%;
+    --ring: 220 70% 55%;
+    
+    --radius: 1rem;
+    
+    /* Updraft Custom Tokens */
+    --sky: 210 80% 65%;
+    --sky-light: 200 85% 94%;
+    --sky-dark: 220 60% 45%;
+    --ink: 220 25% 10%;
+    --sunlight: 45 60% 95%;
+    --twilight: 230 35% 25%;
+    
+    /* Gradients */
+    --gradient-sky: linear-gradient(135deg, hsl(200 85% 94%) 0%, hsl(220 70% 92%) 50%, hsl(210 40% 98%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(200 80% 96%) 0%, hsl(210 40% 98%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(220 70% 55% / 0.15) 0%, transparent 70%);
+    
+    /* Typography */
+    --tracking-tight: -0.01em;
+    --tracking-air: 0.02em;
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 24px -4px hsl(220 70% 55% / 0.12);
+    --shadow-glow: 0 0 60px hsl(220 70% 55% / 0.15);
+    
+    /* Sidebar */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 220 25% 10%;
+    --sidebar-primary: 220 70% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 80% 92%;
+    --sidebar-accent-foreground: 220 70% 40%;
+    --sidebar-border: 210 25% 90%;
+    --sidebar-ring: 220 70% 55%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Twilight mode - not pitch black */
+    --background: 230 30% 12%;
+    --foreground: 210 30% 95%;
+    
+    --card: 230 28% 15%;
+    --card-foreground: 210 30% 95%;
+    
+    --popover: 230 28% 15%;
+    --popover-foreground: 210 30% 95%;
+    
+    --primary: 210 80% 65%;
+    --primary-foreground: 230 30% 10%;
+    
+    --secondary: 230 25% 20%;
+    --secondary-foreground: 210 30% 92%;
+    
+    --muted: 230 25% 18%;
+    --muted-foreground: 210 20% 60%;
+    
+    --accent: 220 50% 25%;
+    --accent-foreground: 210 80% 80%;
+    
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 230 25% 22%;
+    --input: 230 25% 22%;
+    --ring: 210 80% 65%;
+    
+    --sky: 210 70% 55%;
+    --sky-light: 220 40% 30%;
+    --sky-dark: 220 50% 35%;
+    --ink: 210 30% 95%;
+    --sunlight: 45 30% 25%;
+    --twilight: 230 35% 15%;
+    
+    --gradient-sky: linear-gradient(135deg, hsl(230 30% 15%) 0%, hsl(220 35% 18%) 50%, hsl(230 30% 12%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(230 28% 15%) 0%, hsl(230 30% 12%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(210 80% 65% / 0.1) 0%, transparent 70%);
+    
+    --shadow-soft: 0 4px 24px -4px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 80px hsl(210 80% 65% / 0.1);
+    
+    --sidebar-background: 230 30% 12%;
+    --sidebar-foreground: 210 30% 95%;
+    --sidebar-primary: 210 80% 65%;
+    --sidebar-primary-foreground: 230 30% 10%;
+    --sidebar-accent: 220 50% 25%;
+    --sidebar-accent-foreground: 210 80% 80%;
+    --sidebar-border: 230 25% 22%;
+    --sidebar-ring: 210 80% 65%;
   }
 }
 
@@ -99,7 +134,53 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  h1, h2, h3, .wordmark {
+    letter-spacing: var(--tracking-air);
+  }
+}
+
+@layer utilities {
+  .gradient-sky {
+    background: var(--gradient-sky);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-glow {
+    background: var(--gradient-glow);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Accessibility - respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
