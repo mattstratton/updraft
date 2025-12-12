@@ -79,7 +79,8 @@ export default function Recap() {
   };
 
   const handleShare = async () => {
-    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\n#Updraft #Bluesky`;
+    const appUrl = window.location.origin;
+    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\nGet yours at ${appUrl}/recap\n\n#Updraft #Bluesky`;
     
     try {
       if (navigator.share) {
