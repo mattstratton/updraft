@@ -307,12 +307,18 @@ function analyzeTopics(posts: any[]) {
     'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'this', 'that',
     'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
     
-    // Common verbs
-    'get', 'got', 'go', 'goes', 'went', 'gone', 'come', 'comes', 'came', 'see', 'saw', 'seen', 'know', 'knew', 'known',
-    'think', 'thinks', 'thought', 'say', 'says', 'said', 'tell', 'tells', 'told', 'make', 'makes', 'made',
-    'take', 'takes', 'took', 'taken', 'give', 'gives', 'gave', 'given', 'use', 'uses', 'used', 'want', 'wants', 'wanted',
-    'need', 'needs', 'needed', 'try', 'tries', 'tried', 'look', 'looks', 'looked', 'find', 'finds', 'found',
-    'work', 'works', 'worked', 'play', 'plays', 'played', 'call', 'calls', 'called', 'ask', 'asks', 'asked',
+    // Common verbs (including gerunds and variations)
+    'get', 'got', 'gets', 'getting', 'go', 'goes', 'went', 'gone', 'going', 'come', 'comes', 'came', 'coming',
+    'see', 'saw', 'seen', 'sees', 'seeing', 'know', 'knew', 'known', 'knows', 'knowing',
+    'think', 'thinks', 'thought', 'thinking', 'say', 'says', 'said', 'saying', 'tell', 'tells', 'told', 'telling',
+    'make', 'makes', 'made', 'making', 'take', 'takes', 'took', 'taken', 'taking',
+    'give', 'gives', 'gave', 'given', 'giving', 'use', 'uses', 'used', 'using', 'want', 'wants', 'wanted', 'wanting',
+    'need', 'needs', 'needed', 'needing', 'try', 'tries', 'tried', 'trying', 'look', 'looks', 'looked', 'looking',
+    'find', 'finds', 'found', 'finding', 'work', 'works', 'worked', 'working', 'play', 'plays', 'played', 'playing',
+    'call', 'calls', 'called', 'calling', 'ask', 'asks', 'asked', 'asking',
+    'like', 'likes', 'liked', 'liking', 'feel', 'feels', 'felt', 'feeling', 'mean', 'means', 'meant', 'meaning',
+    'keep', 'keeps', 'kept', 'keeping', 'let', 'lets', 'let', 'letting', 'put', 'puts', 'put', 'putting',
+    'show', 'shows', 'showed', 'shown', 'showing', 'seem', 'seems', 'seemed', 'seeming',
     
     // Common adjectives/adverbs
     'more', 'most', 'much', 'many', 'some', 'any', 'all', 'both', 'each', 'every', 'few', 'little', 'less', 'least',
@@ -320,12 +326,16 @@ function analyzeTopics(posts: any[]) {
     'good', 'better', 'best', 'bad', 'worse', 'worst', 'big', 'small', 'large', 'long', 'short', 'high', 'low',
     'new', 'old', 'young', 'first', 'last', 'next', 'same', 'different', 'other', 'another',
     'right', 'wrong', 'true', 'false', 'sure', 'maybe', 'probably', 'actually', 'really',
+    'cool', 'nice', 'great', 'awesome', 'amazing', 'interesting', 'funny', 'weird', 'strange', 'weird',
+    'easy', 'hard', 'simple', 'complex', 'important', 'special', 'normal', 'usual', 'common', 'rare',
     
     // Common nouns (generic)
-    'thing', 'things', 'stuff', 'way', 'ways', 'time', 'times', 'day', 'days', 'year', 'years', 'week', 'weeks',
-    'month', 'months', 'people', 'person', 'man', 'men', 'woman', 'women', 'child', 'children',
+    'thing', 'things', 'stuff', 'way', 'ways', 'time', 'times', 'day', 'days', 'today', 'tomorrow', 'yesterday',
+    'year', 'years', 'week', 'weeks', 'month', 'months', 'hour', 'hours', 'minute', 'minutes', 'moment', 'moments',
+    'people', 'person', 'man', 'men', 'woman', 'women', 'child', 'children', 'guy', 'guys', 'dude', 'dudes',
     'place', 'places', 'part', 'parts', 'kind', 'kinds', 'sort', 'sorts', 'type', 'types',
     'life', 'world', 'house', 'home', 'school', 'work', 'job', 'money', 'car', 'food', 'water',
+    'lot', 'lots', 'bit', 'bits', 'piece', 'pieces', 'point', 'points', 'case', 'cases',
     
     // Prepositions and conjunctions
     'about', 'above', 'across', 'after', 'against', 'along', 'among', 'around', 'before', 'behind', 'below',
@@ -344,6 +354,7 @@ function analyzeTopics(posts: any[]) {
     
     // Social media specific
     'https', 'http', 'www', 'com', 'bsky', 'social', 'twitter', 'x', 'facebook', 'instagram',
+    'bskysocial', // Common Bluesky domain reference
     
     // Numbers (as words)
     'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'first', 'second', 'third',
@@ -373,6 +384,10 @@ function analyzeTopics(posts: any[]) {
         if (stopWords.has(w)) return false;
         // Filter out words that are just numbers or common patterns
         if (/^\d+$/.test(w)) return false;
+        // Filter out domain-like words (bskysocial, twitter, etc.)
+        if (w.includes('social') || w.includes('twitter') || w.includes('facebook') || w.includes('instagram')) return false;
+        // Filter out common domain patterns
+        if (w.endsWith('com') || w.endsWith('net') || w.endsWith('org')) return false;
         if (w.length < 4) return false;
         return true;
       });
