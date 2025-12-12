@@ -262,7 +262,7 @@ export default function Recap() {
           </div>
 
           <p className="text-xs text-muted-foreground/60 mt-6 text-center">
-            #Updraft · updraft.app
+            #Updraft · updraft-app.com
           </p>
         </main>
       </div>
