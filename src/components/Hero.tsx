@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
 
@@ -35,8 +36,8 @@ export function Hero() {
         
         {/* CTAs */}
         <div className="opacity-0 animate-fade-in-delay-4 mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button variant="hero" size="xl">
-            See your Updraft
+          <Button variant="hero" size="xl" asChild>
+            <Link to="/auth">See your Updraft</Link>
           </Button>
         </div>
         
