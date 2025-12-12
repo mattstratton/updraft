@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
-import { RecapCard } from "@/components/RecapCard";
+import { StoryCard, CardVariant } from "@/components/RecapCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface RecapData {
@@ -23,24 +23,33 @@ interface RecapData {
     totalReposts: number;
     totalReplies: number;
     totalEngagement: number;
+    avgEngagement: number;
+    daysActive: number;
   };
   topPost: {
     text: string;
     likes: number;
     reposts: number;
     replies: number;
+    uri: string;
   } | null;
   patterns: {
     mostActiveMonth: string;
     mostActiveDay: string;
+    peakHour: number;
+    longestStreak: number;
+    topWords: string[];
   };
   year: number;
 }
+
+const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "finale"];
 
 export default function Recap() {
   const [handle, setHandle] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [recap, setRecap] = useState<RecapData | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleFetchRecap = async () => {
     if (!handle.trim()) {
@@ -49,6 +58,7 @@ export default function Recap() {
     }
 
     setIsLoading(true);
+    setCurrentIndex(0);
     try {
       const { data, error } = await supabase.functions.invoke("bluesky-fetch", {
         body: { handle: handle.trim().replace("@", "") },
@@ -58,7 +68,7 @@ export default function Recap() {
       if (data.error) throw new Error(data.error);
 
       setRecap(data);
-      toast.success("Your 2024 recap is ready!");
+      toast.success(`Your ${data.year} recap is ready!`);
     } catch (error: unknown) {
       console.error("Error fetching recap:", error);
       const message = error instanceof Error ? error.message : "Failed to fetch your recap";
@@ -69,7 +79,7 @@ export default function Recap() {
   };
 
   const handleShare = async () => {
-    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n\n#Updraft`;
+    const shareText = `Check out my ${recap?.year} Bluesky recap with Updraft! 🌬️\n\n📊 ${recap?.stats.totalPosts} posts\n❤️ ${recap?.stats.totalLikes} likes received\n🔥 ${recap?.patterns.longestStreak} day streak\n\n#Updraft #Bluesky`;
     
     if (navigator.share) {
       try {
@@ -86,132 +96,118 @@ export default function Recap() {
     }
   };
 
+  const nextCard = () => {
+    setCurrentIndex((prev) => (prev + 1) % cardVariants.length);
+  };
+
+  const prevCard = () => {
+    setCurrentIndex((prev) => (prev - 1 + cardVariants.length) % cardVariants.length);
+  };
+
+  const getCardData = (variant: CardVariant) => {
+    if (!recap) return null;
+    return {
+      variant,
+      handle: recap.profile.handle,
+      displayName: recap.profile.displayName,
+      avatar: recap.profile.avatar,
+      year: recap.year,
+      totalPosts: recap.stats.totalPosts,
+      totalLikes: recap.stats.totalLikes,
+      totalReposts: recap.stats.totalReposts,
+      totalEngagement: recap.stats.totalEngagement,
+      avgEngagement: recap.stats.avgEngagement,
+      daysActive: recap.stats.daysActive,
+      mostActiveMonth: recap.patterns.mostActiveMonth,
+      mostActiveDay: recap.patterns.mostActiveDay,
+      peakHour: recap.patterns.peakHour,
+      longestStreak: recap.patterns.longestStreak,
+      topPostText: recap.topPost?.text,
+      topPostLikes: recap.topPost?.likes,
+      topPostReposts: recap.topPost?.reposts,
+    };
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   if (recap) {
+    const cardData = getCardData(cardVariants[currentIndex]);
+
     return (
-      <div className="min-h-screen gradient-hero py-8 px-4">
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen flex flex-col gradient-hero">
+        {/* Header */}
+        <header className="flex items-center justify-between p-4 sm:p-6">
           <button
             onClick={() => setRecap(null)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Try another handle
+            <span className="hidden sm:inline">Try another</span>
           </button>
+          <div className="flex items-center gap-2">
+            <UpdraftIcon className="w-6 h-6 text-primary" />
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleShare}>
+            <Share2 className="w-4 h-4" />
+          </Button>
+        </header>
 
-          <div className="space-y-6">
-            {/* Profile Header */}
-            <RecapCard delay={0}>
-              <div className="flex items-center gap-4">
-                {recap.profile.avatar && (
-                  <img
-                    src={recap.profile.avatar}
-                    alt={recap.profile.displayName}
-                    className="w-16 h-16 rounded-full border-2 border-primary/20"
-                  />
-                )}
-                <div>
-                  <h2 className="text-2xl font-display font-bold">
-                    {recap.profile.displayName}
-                  </h2>
-                  <p className="text-muted-foreground">@{recap.profile.handle}</p>
-                </div>
-              </div>
-            </RecapCard>
+        {/* Main content */}
+        <main className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
+          {/* Card carousel */}
+          <div className="relative w-full max-w-md">
+            {/* Navigation arrows */}
+            <button
+              onClick={prevCard}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-14 p-2 rounded-full bg-card/80 border border-border/50 hover:bg-card transition-colors z-20"
+              aria-label="Previous card"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={nextCard}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-14 p-2 rounded-full bg-card/80 border border-border/50 hover:bg-card transition-colors z-20"
+              aria-label="Next card"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
 
-            {/* Year Title */}
-            <RecapCard delay={0.1}>
-              <div className="text-center py-4">
-                <span className="text-6xl font-display font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {recap.year}
-                </span>
-                <p className="text-muted-foreground mt-2">Your Year in Review</p>
-              </div>
-            </RecapCard>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <RecapCard delay={0.2}>
-                <div className="text-center">
-                  <span className="text-4xl font-bold text-primary">
-                    {recap.stats.totalPosts.toLocaleString()}
-                  </span>
-                  <p className="text-muted-foreground text-sm mt-1">Posts</p>
-                </div>
-              </RecapCard>
-              <RecapCard delay={0.3}>
-                <div className="text-center">
-                  <span className="text-4xl font-bold text-accent">
-                    {recap.stats.totalLikes.toLocaleString()}
-                  </span>
-                  <p className="text-muted-foreground text-sm mt-1">Likes Received</p>
-                </div>
-              </RecapCard>
-              <RecapCard delay={0.4}>
-                <div className="text-center">
-                  <span className="text-4xl font-bold text-primary">
-                    {recap.stats.totalReposts.toLocaleString()}
-                  </span>
-                  <p className="text-muted-foreground text-sm mt-1">Reposts</p>
-                </div>
-              </RecapCard>
-              <RecapCard delay={0.5}>
-                <div className="text-center">
-                  <span className="text-4xl font-bold text-accent">
-                    {recap.stats.totalEngagement.toLocaleString()}
-                  </span>
-                  <p className="text-muted-foreground text-sm mt-1">Total Engagement</p>
-                </div>
-              </RecapCard>
+            {/* Card */}
+            <div className="transition-all duration-300 flex justify-center">
+              {cardData && <StoryCard data={cardData} />}
             </div>
 
-            {/* Patterns */}
-            <RecapCard delay={0.6}>
-              <h3 className="font-display font-semibold mb-4">Your Posting Patterns</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-muted-foreground text-sm">Most Active Month</p>
-                  <p className="text-xl font-semibold text-primary">
-                    {recap.patterns.mostActiveMonth}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Favorite Day</p>
-                  <p className="text-xl font-semibold text-accent">
-                    {recap.patterns.mostActiveDay}
-                  </p>
-                </div>
-              </div>
-            </RecapCard>
-
-            {/* Top Post */}
-            {recap.topPost && (
-              <RecapCard delay={0.7}>
-                <h3 className="font-display font-semibold mb-4">Your Top Post</h3>
-                <p className="text-foreground/90 italic mb-4">
-                  "{recap.topPost.text.slice(0, 200)}
-                  {recap.topPost.text.length > 200 ? "..." : ""}"
-                </p>
-                <div className="flex gap-4 text-sm text-muted-foreground">
-                  <span>❤️ {recap.topPost.likes}</span>
-                  <span>🔁 {recap.topPost.reposts}</span>
-                  <span>💬 {recap.topPost.replies}</span>
-                </div>
-              </RecapCard>
-            )}
-
-            {/* Share Button */}
-            <div className="flex justify-center pt-4">
-              <Button variant="hero" size="lg" onClick={handleShare}>
-                <Share2 className="w-4 h-4 mr-2" />
-                Share your Updraft
-              </Button>
+            {/* Dots indicator */}
+            <div className="flex items-center justify-center gap-2 mt-6">
+              {cardVariants.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentIndex
+                      ? "bg-primary w-6"
+                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50 w-2"
+                  }`}
+                  aria-label={`Go to card ${index + 1}`}
+                />
+              ))}
             </div>
           </div>
-        </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 mt-8">
+            <Button variant="hero" size="lg" onClick={handleShare}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share your Updraft
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground/60 mt-6 text-center">
+            #Updraft · updraft.app
+          </p>
+        </main>
       </div>
     );
   }
@@ -235,7 +231,7 @@ export default function Recap() {
             <UpdraftLogo size="lg" />
           </div>
           <p className="text-muted-foreground">
-            Enter a Bluesky handle to see their 2024 recap
+            Enter a Bluesky handle to see their {new Date().getFullYear()} recap
           </p>
         </div>
 

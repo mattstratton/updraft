@@ -1,23 +1,272 @@
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import { UpdraftLogo } from "@/components/UpdraftLogo";
+import { ReactNode, forwardRef } from "react";
 
-interface RecapCardProps {
+// Simple wrapper card for general use
+interface SimpleCardProps {
   children: ReactNode;
   delay?: number;
   className?: string;
 }
 
-export function RecapCard({ children, delay = 0, className }: RecapCardProps) {
+export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
+  ({ children, delay = 0, className }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-soft",
+          "opacity-0 animate-fade-in",
+          className
+        )}
+        style={{ animationDelay: `${delay}s`, animationFillMode: "forwards" }}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+RecapCard.displayName = "RecapCard";
+
+// Shareable story-style card variants
+export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "finale";
+
+interface StoryCardData {
+  variant: CardVariant;
+  handle: string;
+  displayName: string;
+  avatar?: string;
+  year: number;
+  // Stats
+  totalPosts?: number;
+  totalLikes?: number;
+  totalReposts?: number;
+  totalEngagement?: number;
+  avgEngagement?: number;
+  // Patterns
+  mostActiveMonth?: string;
+  mostActiveDay?: string;
+  peakHour?: number;
+  longestStreak?: number;
+  daysActive?: number;
+  // Top post
+  topPostText?: string;
+  topPostLikes?: number;
+  topPostReposts?: number;
+}
+
+interface StoryCardProps {
+  data: StoryCardData;
+  className?: string;
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+  if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+  return num.toLocaleString();
+}
+
+function formatHour(hour: number): string {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h = hour % 12 || 12;
+  return `${h} ${ampm}`;
+}
+
+const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
+  intro: {
+    title: "Your year on Bluesky",
+    tagline: "Let's see what you've been up to.",
+  },
+  stats: {
+    title: "You showed up",
+    tagline: "Every post, a small signal in the sky.",
+  },
+  topPost: {
+    title: "This one hit different",
+    tagline: "Your most engaging post of the year.",
+  },
+  rhythm: {
+    title: "Your rhythm",
+    tagline: "When inspiration struck.",
+  },
+  streak: {
+    title: "Consistency is everything",
+    tagline: "You kept showing up.",
+  },
+  finale: {
+    title: "That was your year",
+    tagline: "Some posts catch an updraft. Some become it.",
+  },
+};
+
+export function StoryCard({ data, className }: StoryCardProps) {
+  const { variant, handle, displayName, avatar, year } = data;
+  const content = cardContent[variant];
+
+  const renderContent = () => {
+    switch (variant) {
+      case "intro":
+        return (
+          <div className="flex flex-col items-center gap-6">
+            {avatar && (
+              <img
+                src={avatar}
+                alt={displayName}
+                className="w-24 h-24 rounded-full border-4 border-primary/30 shadow-lg"
+              />
+            )}
+            <div className="text-center">
+              <h2 className="text-2xl font-display font-bold">{displayName}</h2>
+              <p className="text-muted-foreground">@{handle}</p>
+            </div>
+            <span className="text-7xl font-display font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              {year}
+            </span>
+          </div>
+        );
+
+      case "stats":
+        return (
+          <div className="space-y-8">
+            <div className="text-center">
+              <span className="text-7xl font-bold text-foreground">
+                {formatNumber(data.totalPosts || 0)}
+              </span>
+              <p className="text-xl text-muted-foreground mt-2">posts shared</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <span className="text-3xl font-bold text-primary">
+                  {formatNumber(data.totalLikes || 0)}
+                </span>
+                <p className="text-sm text-muted-foreground">likes received</p>
+              </div>
+              <div>
+                <span className="text-3xl font-bold text-accent">
+                  {formatNumber(data.totalReposts || 0)}
+                </span>
+                <p className="text-sm text-muted-foreground">reposts</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "topPost":
+        return (
+          <div className="space-y-6">
+            <p className="text-lg text-foreground/90 italic leading-relaxed">
+              "{data.topPostText?.slice(0, 180)}
+              {(data.topPostText?.length || 0) > 180 ? "..." : ""}"
+            </p>
+            <div className="flex justify-center gap-6 text-lg">
+              <span className="flex items-center gap-1">
+                <span className="text-red-400">❤️</span> {data.topPostLikes}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="text-green-400">🔁</span> {data.topPostReposts}
+              </span>
+            </div>
+          </div>
+        );
+
+      case "rhythm":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">Peak month</p>
+              <span className="text-4xl font-bold text-primary">
+                {data.mostActiveMonth}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-muted-foreground text-sm mb-1">Favorite day</p>
+                <span className="text-2xl font-semibold text-accent">
+                  {data.mostActiveDay}
+                </span>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm mb-1">Peak hour</p>
+                <span className="text-2xl font-semibold text-primary">
+                  {formatHour(data.peakHour || 12)}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "streak":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <span className="text-7xl font-bold text-foreground">
+                {data.longestStreak || 0}
+              </span>
+              <p className="text-xl text-muted-foreground mt-2">day streak</p>
+            </div>
+            <div>
+              <span className="text-3xl font-bold text-primary">
+                {data.daysActive || 0}
+              </span>
+              <p className="text-sm text-muted-foreground">days active this year</p>
+            </div>
+          </div>
+        );
+
+      case "finale":
+        return (
+          <div className="space-y-8 text-center">
+            <span className="text-6xl font-display font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              {formatNumber(data.totalEngagement || 0)}
+            </span>
+            <p className="text-xl text-muted-foreground">total interactions</p>
+            <p className="text-base text-muted-foreground/80">
+              Avg. {data.avgEngagement || 0} per post
+            </p>
+          </div>
+        );
+    }
+  };
+
   return (
     <div
       className={cn(
-        "bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-soft",
-        "opacity-0 animate-fade-in",
+        "relative w-full max-w-md aspect-[9/16] rounded-3xl overflow-hidden",
+        "bg-gradient-to-br from-card via-background to-sky-light/20",
+        "border border-border/50 shadow-soft",
         className
       )}
-      style={{ animationDelay: `${delay}s` }}
     >
-      {children}
+      {/* Background glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[300px] h-[300px] gradient-glow opacity-40" />
+
+      <div className="relative z-10 h-full flex flex-col items-center justify-between p-8 text-center">
+        {/* Top - Title */}
+        <div className="pt-6">
+          <h2 className="text-lg font-medium text-muted-foreground">
+            {content.title}
+          </h2>
+          <p className="text-sm text-muted-foreground/60 mt-1">{year}</p>
+        </div>
+
+        {/* Center - Content */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
+          {renderContent()}
+        </div>
+
+        {/* Bottom - Tagline & Branding */}
+        <div className="pb-4">
+          <p className="text-sm text-muted-foreground italic mb-4">
+            {content.tagline}
+          </p>
+          <div className="flex flex-col items-center gap-1">
+            <UpdraftLogo size="sm" className="opacity-70" />
+            <p className="text-xs text-muted-foreground/50">
+              updraft.app · @{handle}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
