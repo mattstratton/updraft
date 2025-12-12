@@ -89,6 +89,8 @@ export default function Recap() {
     
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      console.log('Calling API at:', `${apiUrl}/api/recap`);
+      
       const response = await fetch(`${apiUrl}/api/recap`, {
         method: "POST",
         headers: {
@@ -96,6 +98,14 @@ export default function Recap() {
         },
         body: JSON.stringify({ handle: cleanHandle }),
       });
+
+      // Check if response is actually JSON (not HTML error page)
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Non-JSON response received:", text.substring(0, 200));
+        throw new Error(`API returned non-JSON response. Check that VITE_API_URL is set correctly. Current: ${apiUrl}`);
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));

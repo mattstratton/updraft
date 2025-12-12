@@ -6,7 +6,11 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // Middleware
-app.use(cors());
+// CORS - allow all origins (you can restrict this to your frontend domain in production)
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+}));
 app.use(express.json());
 
 // Health check
