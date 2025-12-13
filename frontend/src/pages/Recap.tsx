@@ -70,13 +70,17 @@ export default function Recap() {
   useEffect(() => {
     const userParam = searchParams.get("user");
     if (userParam && !recap && !isLoading) {
-      setHandle(userParam);
-      fetchRecap(userParam);
+      // Normalize handle from URL parameter
+      const normalizedHandle = userParam.trim().replace(/^@/, "").toLowerCase();
+      setHandle(normalizedHandle);
+      fetchRecap(normalizedHandle);
     }
   }, []);
 
   const fetchRecap = async (userHandle: string) => {
-    const cleanHandle = userHandle.trim().replace("@", "");
+    // Normalize handle: remove @, trim, and convert to lowercase
+    // Bluesky handles are case-insensitive but should be normalized to lowercase
+    const cleanHandle = userHandle.trim().replace("@", "").toLowerCase();
     if (!cleanHandle) {
       toast.error("Please enter a Bluesky handle");
       return;

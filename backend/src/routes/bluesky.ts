@@ -5,11 +5,15 @@ export const blueskyRouter = Router();
 
 blueskyRouter.post('/recap', async (req, res) => {
   try {
-    const { handle } = req.body;
+    let { handle } = req.body;
     
     if (!handle) {
       return res.status(400).json({ error: "Handle is required" });
     }
+
+    // Normalize handle: remove @, trim, and convert to lowercase
+    // Bluesky handles are case-insensitive but should be normalized to lowercase
+    handle = handle.trim().replace(/^@/, "").toLowerCase();
 
     const recap = await generateRecap(handle);
 
