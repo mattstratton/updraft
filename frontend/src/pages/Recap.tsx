@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UpdraftLogo, UpdraftIcon } from "@/components/UpdraftLogo";
@@ -6,8 +6,9 @@ import { StoryCard, CardVariant } from "@/components/RecapCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
-import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw, Image as ImageIcon, Download } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import html2canvas from "html2canvas";
 
 interface TopFan {
   handle: string;
@@ -66,7 +67,7 @@ interface RecapData {
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "finale"];
+const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "summary", "finale"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,6 +75,8 @@ export default function Recap() {
   const [isLoading, setIsLoading] = useState(false);
   const [recap, setRecap] = useState<RecapData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Auto-fetch if user param is present
   useEffect(() => {
@@ -195,6 +198,260 @@ export default function Recap() {
       toast.error(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to proxy image through backend to avoid CORS
+  const proxyImage = async (url: string): Promise<string> => {
+    if (!url.includes('cdn.bsky.app')) {
+      return url; // Return original URL if not from Bluesky CDN
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const proxyUrl = `${apiUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+    return proxyUrl;
+  };
+
+  const handleShareImage = async () => {
+    if (!cardRef.current || !recap) {
+      toast.error("Unable to generate image");
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    try {
+      // Hide navigation elements temporarily
+      const navElements = document.querySelectorAll('[aria-label="Previous card"], [aria-label="Next card"], .flex.items-center.justify-center.gap-2.mt-6');
+      const originalDisplay: string[] = [];
+      navElements.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        originalDisplay.push(htmlEl.style.display);
+        htmlEl.style.display = 'none';
+      });
+
+      // Proxy external images through backend to avoid CORS issues
+      const images = cardRef.current.querySelectorAll('img');
+      const originalSrcs: string[] = [];
+      const conversionPromises: Promise<void>[] = [];
+
+      images.forEach((img, index) => {
+        if (img.src && img.src.startsWith('http')) {
+          originalSrcs[index] = img.src;
+          conversionPromises.push(
+            proxyImage(img.src).then((proxyUrl) => {
+              img.src = proxyUrl;
+            }).catch(() => {
+              // Keep original src if proxy fails
+            })
+          );
+        }
+      });
+
+      // Wait for all images to be proxied
+      await Promise.all(conversionPromises);
+      
+      // Wait for images to load and fonts to be ready
+      await Promise.all([
+        // Wait for all images to load
+        Promise.all(
+          Array.from(cardRef.current.querySelectorAll('img')).map((img) => {
+            if (img.complete) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = resolve; // Continue even if image fails
+              setTimeout(resolve, 2000); // Timeout after 2 seconds
+            });
+          })
+        ),
+        // Wait for fonts to load
+        document.fonts.ready,
+        // Small delay to ensure everything is rendered
+        new Promise(resolve => setTimeout(resolve, 200)),
+      ]);
+
+      // Get actual rendered dimensions
+      const rect = cardRef.current.getBoundingClientRect();
+      const actualWidth = rect.width;
+      const actualHeight = rect.height;
+      
+      // Ensure we have valid dimensions
+      if (actualWidth === 0 || actualHeight === 0) {
+        throw new Error('Card has zero dimensions');
+      }
+      
+      // Store original styles to restore later
+      const originalCardStyle = {
+        width: cardRef.current.style.width,
+        maxWidth: cardRef.current.style.maxWidth,
+        minWidth: cardRef.current.style.minWidth,
+      };
+      
+      // Set explicit width for image generation to ensure consistent rendering
+      cardRef.current.style.width = `${actualWidth}px`;
+      cardRef.current.style.maxWidth = `${actualWidth}px`;
+      cardRef.current.style.minWidth = '0';
+      
+      // Wait for layout to update
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Generate image with high quality
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2, // 2x resolution for high quality
+        logging: false,
+        useCORS: true,
+        allowTaint: false,
+        width: actualWidth,
+        height: actualHeight,
+        windowWidth: actualWidth,
+        windowHeight: actualHeight,
+        imageTimeout: 15000,
+        onclone: (clonedDoc, element) => {
+          // Fix text overflow issues in the cloned document
+          const clonedCard = element as HTMLElement;
+          if (clonedCard) {
+            // Set explicit width on the card
+            clonedCard.style.width = `${actualWidth}px`;
+            clonedCard.style.maxWidth = `${actualWidth}px`;
+            clonedCard.style.minWidth = '0';
+            clonedCard.style.boxSizing = 'border-box';
+            
+            // Fix all flex containers
+            const flexContainers = clonedCard.querySelectorAll('.flex-1, [class*="flex-1"], .flex');
+            flexContainers.forEach((container) => {
+              const htmlEl = container as HTMLElement;
+              htmlEl.style.minWidth = '0';
+              htmlEl.style.boxSizing = 'border-box';
+            });
+            
+            // Fix all text elements that should truncate
+            const textElements = clonedCard.querySelectorAll('p.truncate, span.truncate, p[class*="truncate"]');
+            textElements.forEach((el) => {
+              const htmlEl = el as HTMLElement;
+              htmlEl.style.textOverflow = 'ellipsis';
+              htmlEl.style.overflow = 'hidden';
+              htmlEl.style.whiteSpace = 'nowrap';
+              htmlEl.style.maxWidth = '100%';
+              htmlEl.style.display = 'block';
+              htmlEl.style.boxSizing = 'border-box';
+            });
+            
+            // Specifically fix the topFans list items - find by structure
+            const fanRows = clonedCard.querySelectorAll('.flex.items-center.gap-3');
+            fanRows.forEach((row) => {
+              const rowEl = row as HTMLElement;
+              rowEl.style.minWidth = '0';
+              rowEl.style.width = '100%';
+              rowEl.style.boxSizing = 'border-box';
+              
+              const textContainer = rowEl.querySelector('.flex-1');
+              if (textContainer) {
+                const textEl = textContainer as HTMLElement;
+                textEl.style.minWidth = '0';
+                textEl.style.maxWidth = '100%';
+                textEl.style.overflow = 'hidden';
+                textEl.style.width = '100%';
+                textEl.style.boxSizing = 'border-box';
+                
+                const nameEl = textContainer.querySelector('p');
+                if (nameEl) {
+                  const nameHtmlEl = nameEl as HTMLElement;
+                  nameHtmlEl.style.textOverflow = 'ellipsis';
+                  nameHtmlEl.style.overflow = 'hidden';
+                  nameHtmlEl.style.whiteSpace = 'nowrap';
+                  nameHtmlEl.style.maxWidth = '100%';
+                  nameHtmlEl.style.width = '100%';
+                  nameHtmlEl.style.display = 'block';
+                  nameHtmlEl.style.boxSizing = 'border-box';
+                }
+              }
+            });
+            
+            // Fix summary card text truncation
+            const summaryItems = clonedCard.querySelectorAll('.flex.items-center.justify-between');
+            summaryItems.forEach((item) => {
+              const itemEl = item as HTMLElement;
+              itemEl.style.minWidth = '0';
+              itemEl.style.width = '100%';
+              itemEl.style.boxSizing = 'border-box';
+              
+              const textSpan = itemEl.querySelector('span.font-medium.truncate, span.font-medium[class*="truncate"]');
+              if (textSpan) {
+                const textSpanEl = textSpan as HTMLElement;
+                textSpanEl.style.textOverflow = 'ellipsis';
+                textSpanEl.style.overflow = 'hidden';
+                textSpanEl.style.whiteSpace = 'nowrap';
+                textSpanEl.style.maxWidth = '100%';
+                textSpanEl.style.display = 'inline-block';
+                textSpanEl.style.boxSizing = 'border-box';
+              }
+            });
+            
+            // Fix the parent container
+            const contentContainer = clonedCard.querySelector('.flex-1.flex.flex-col, .flex-1');
+            if (contentContainer) {
+              const contentEl = contentContainer as HTMLElement;
+              contentEl.style.width = '100%';
+              contentEl.style.maxWidth = '100%';
+              contentEl.style.minWidth = '0';
+              contentEl.style.boxSizing = 'border-box';
+            }
+            
+            // Force a reflow to ensure styles are applied
+            clonedCard.offsetHeight;
+          }
+        },
+      });
+      
+      // Restore original styles
+      cardRef.current.style.width = originalCardStyle.width;
+      cardRef.current.style.maxWidth = originalCardStyle.maxWidth;
+      cardRef.current.style.minWidth = originalCardStyle.minWidth;
+
+      // Restore original image sources
+      images.forEach((img, index) => {
+        if (originalSrcs[index]) {
+          img.src = originalSrcs[index];
+        }
+      });
+
+      // Restore navigation elements
+      navElements.forEach((el, i) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = originalDisplay[i];
+      });
+
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast.error("Failed to generate image");
+          setIsGeneratingImage(false);
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const fileName = `updraft-${recap.profile.handle}-${recap.year}-${cardVariants[currentIndex]}.png`;
+
+        // Download the image
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 100);
+
+        toast.success("Image downloaded! You can now share it.");
+        setIsGeneratingImage(false);
+      }, 'image/png', 0.95); // High quality PNG
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate image. Please try again.");
+      setIsGeneratingImage(false);
     }
   };
 
@@ -342,7 +599,7 @@ export default function Recap() {
 
             {/* Card */}
             <div className="transition-all duration-300 flex justify-center">
-              {cardData && <StoryCard data={cardData} />}
+              {cardData && <StoryCard ref={cardRef} data={cardData} />}
             </div>
 
             {/* Dots indicator */}
@@ -364,10 +621,31 @@ export default function Recap() {
 
           {/* Action buttons */}
           <div className="flex flex-col items-center gap-3 mt-8 w-full max-w-md">
-            <Button variant="hero" size="lg" onClick={handleShare} className="w-full sm:w-auto">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share your Updraft
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button variant="hero" size="lg" onClick={handleShare} className="w-full sm:w-auto">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share Text
+              </Button>
+              <Button 
+                variant="hero" 
+                size="lg" 
+                onClick={handleShareImage}
+                disabled={isGeneratingImage}
+                className="w-full sm:w-auto"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Share Image
+                  </>
+                )}
+              </Button>
+            </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button 
                 variant="outline" 

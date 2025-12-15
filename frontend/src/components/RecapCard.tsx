@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { UpdraftLogo } from "@/components/UpdraftLogo";
 import { ReactNode, forwardRef } from "react";
+import { UpdraftLogo } from "@/components/UpdraftLogo";
 
 // Simple wrapper card for general use
 interface SimpleCardProps {
@@ -29,7 +29,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "finale";
+export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "summary" | "finale";
 
 interface TopFan {
   handle: string;
@@ -129,15 +129,20 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
     title: "What you talked about",
     tagline: "The words that defined your year.",
   },
+  summary: {
+    title: "Your year in numbers",
+    tagline: "The highlights that made it yours.",
+  },
   finale: {
     title: "That was your year",
     tagline: "Some posts catch an updraft. Some become it.",
   },
 };
 
-export function StoryCard({ data, className }: StoryCardProps) {
-  const { variant, handle, displayName, avatar, year } = data;
-  const content = cardContent[variant];
+export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
+  ({ data, className }, ref) => {
+    const { variant, handle, displayName, avatar, year } = data;
+    const content = cardContent[variant];
 
   const renderContent = () => {
     switch (variant) {
@@ -282,30 +287,32 @@ export function StoryCard({ data, className }: StoryCardProps) {
 
       case "topFans":
         return (
-          <div className="space-y-4 w-full">
+          <div className="space-y-4 w-full px-2">
             {data.topFans && data.topFans.length > 0 ? (
               data.topFans.slice(0, 5).map((fan, index) => (
-                <div key={fan.handle} className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-primary/60 w-6">
+                <div key={fan.handle} className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl font-bold text-primary/60 flex-shrink-0 w-6">
                     {index + 1}
                   </span>
                   {fan.avatar ? (
                     <img
                       src={fan.avatar}
                       alt={fan.displayName}
-                      className="w-10 h-10 rounded-full border border-border/50"
+                      className="w-10 h-10 rounded-full border border-border/50 flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                       <span className="text-muted-foreground text-sm">
                         {fan.displayName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-sm truncate">{fan.displayName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatNumber(fan.likes)}❤️ {formatNumber(fan.reposts)}🔁
+                  <div className="flex-1 min-w-0 text-left overflow-hidden">
+                    <p className="font-medium text-sm truncate" title={fan.displayName}>
+                      {fan.displayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {formatNumber(fan.likes)} ❤️ {formatNumber(fan.reposts)} 🔁
                     </p>
                   </div>
                 </div>
@@ -362,6 +369,69 @@ export function StoryCard({ data, className }: StoryCardProps) {
           </div>
         );
 
+      case "summary":
+        return (
+          <div className="space-y-6 w-full">
+            {/* Stats highlights */}
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <span className="text-4xl font-bold text-foreground block">
+                  {formatNumber(data.totalPosts || 0)}
+                </span>
+                <p className="text-xs text-muted-foreground mt-1">posts</p>
+              </div>
+              <div>
+                <span className="text-4xl font-bold text-foreground block">
+                  {formatNumber(data.totalLikes || 0)}
+                </span>
+                <p className="text-xs text-muted-foreground mt-1">likes</p>
+              </div>
+              <div>
+                <span className="text-4xl font-bold text-foreground block">
+                  {formatNumber(data.totalReposts || 0)}
+                </span>
+                <p className="text-xs text-muted-foreground mt-1">reposts</p>
+              </div>
+              <div>
+                <span className="text-4xl font-bold text-foreground block">
+                  {data.longestStreak || 0}
+                </span>
+                <p className="text-xs text-muted-foreground mt-1">day streak</p>
+              </div>
+            </div>
+
+            {/* Top highlights */}
+            <div className="space-y-3 pt-2 border-t border-border/30">
+              {data.topPostLikes && data.topPostLikes > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Top post</span>
+                  <span className="font-medium">{formatNumber(data.topPostLikes)} ❤️</span>
+                </div>
+              )}
+              {data.posterType && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">You're a</span>
+                  <span className="font-medium text-primary">{data.posterType}</span>
+                </div>
+              )}
+              {data.postingAge && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Posting age</span>
+                  <span className="font-medium">{data.postingAgeYear || data.postingAge}</span>
+                </div>
+              )}
+              {data.topFans && data.topFans.length > 0 && (
+                <div className="flex items-center justify-between text-sm min-w-0">
+                  <span className="text-muted-foreground flex-shrink-0">Biggest fan</span>
+                  <span className="font-medium truncate max-w-[60%] min-w-0 text-right" title={data.topFans[0].displayName}>
+                    {data.topFans[0].displayName}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case "finale":
         return (
           <div className="space-y-8 text-center">
@@ -379,6 +449,7 @@ export function StoryCard({ data, className }: StoryCardProps) {
 
   return (
     <div
+      ref={ref}
       className={cn(
         "relative w-full max-w-md aspect-[9/16] rounded-3xl overflow-hidden",
         "bg-gradient-to-br from-card via-background to-sky-light/20",
@@ -418,4 +489,6 @@ export function StoryCard({ data, className }: StoryCardProps) {
       </div>
     </div>
   );
-}
+});
+
+StoryCard.displayName = "StoryCard";
