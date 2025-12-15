@@ -28,17 +28,21 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install serve (lightweight static file server)
-RUN npm install -g serve
+# Copy package.json to install production dependencies
+COPY --from=builder /app/package*.json ./
+
+# Install only production dependencies (express for secure server)
+RUN npm ci --omit=dev
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
+# Copy secure server script
+COPY --from=builder /app/server.js ./server.js
+
 # Expose port (Railway will set PORT env var)
 EXPOSE ${PORT:-3000}
 
-# Use serve to serve the built app
-# -s flag enables SPA mode (all routes serve index.html)
-# -l flag sets the port from Railway's PORT env var
-CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]
+# Use our secure server wrapper
+CMD ["node", "server.js"]
 
