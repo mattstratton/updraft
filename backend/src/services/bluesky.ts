@@ -470,7 +470,7 @@ function analyzePosterType(posts: any[], totalPosts: number, totalReplies: numbe
   // Determine poster type (check in priority order)
   
   // Streak Master
-  if (longestStreak > 30) {
+  if (longestStreak > 200) {
     return {
       type: "Streak Master",
       description: `${longestStreak} days in a row? That's not dedication, that's a cry for help. (We're impressed though.)`,
@@ -513,7 +513,7 @@ function analyzePosterType(posts: any[], totalPosts: number, totalReplies: numbe
   if (replyRatio > 0.4) {
     return {
       type: "Conversationalist",
-      description: "You can't help yourself—you reply to everything. Threads would die without you, and you know it.",
+      description: "You can't help yourself - you reply to everything. People's threads would die without you, and you know it.",
     };
   }
 

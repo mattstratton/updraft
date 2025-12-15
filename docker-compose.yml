@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: updraft-postgres
+    environment:
+      POSTGRES_USER: updraft
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-updraft_dev}
+      POSTGRES_DB: updraft
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U updraft"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -13,8 +31,12 @@ services:
       - PORT=3001
       - BLUESKY_IDENTIFIER=${BLUESKY_IDENTIFIER}
       - BLUESKY_APP_PASSWORD=${BLUESKY_APP_PASSWORD}
+      - DATABASE_URL=postgresql://updraft:${POSTGRES_PASSWORD:-updraft_dev}@postgres:5432/updraft
     env_file:
       - backend/.env.local
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
@@ -39,4 +61,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  postgres_data:
 

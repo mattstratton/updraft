@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { blueskyRouter } from './routes/bluesky.js';
+import { prisma } from './lib/prisma.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -21,7 +22,34 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api', blueskyRouter);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// Initialize Prisma and start server
+async function startServer() {
+  try {
+    // Test database connection
+    await prisma.$connect();
+    console.log('✅ Database connected');
+  } catch (error) {
+    console.warn('⚠️  Database connection failed, continuing without cache:', error);
+    // Continue without database - caching will gracefully degrade
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
+
+startServer();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
 

@@ -6,7 +6,7 @@ import { StoryCard, CardVariant } from "@/components/RecapCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
-import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Share2, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 interface TopFan {
@@ -159,6 +159,44 @@ export default function Recap() {
   };
 
   const handleFetchRecap = () => fetchRecap(handle);
+
+  const handleRegenerate = async () => {
+    if (!recap) return;
+    
+    setIsLoading(true);
+    try {
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      // Ensure the URL has a protocol (https:// or http://)
+      if (apiUrl && !apiUrl.match(/^https?:\/\//)) {
+        apiUrl = `https://${apiUrl}`;
+      }
+
+      const response = await fetch(`${apiUrl}/api/recap/regenerate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ handle: recap.profile.handle }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to regenerate recap' }));
+        throw new Error(errorData.error || 'Failed to regenerate recap');
+      }
+
+      const data = await response.json();
+      setRecap(data);
+      setCurrentIndex(0); // Reset to first card
+      toast.success("Recap regenerated!");
+    } catch (error: unknown) {
+      console.error("Error regenerating recap:", error);
+      const message = error instanceof Error ? error.message : "Failed to regenerate recap";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleShare = async () => {
     const appUrl = window.location.origin;
@@ -330,17 +368,29 @@ export default function Recap() {
               <Share2 className="w-4 h-4 mr-2" />
               Share your Updraft
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              onClick={() => {
-                setRecap(null);
-                setSearchParams({});
-              }}
-              className="w-full sm:w-auto"
-            >
-              Try another handle
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={handleRegenerate}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Regenerate
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={() => {
+                  setRecap(null);
+                  setSearchParams({});
+                }}
+                className="w-full sm:w-auto"
+              >
+                Try another handle
+              </Button>
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground/60 mt-6 text-center">

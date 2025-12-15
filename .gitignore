@@ -35,3 +35,6 @@ dist-ssr
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+# Prisma
+# Note: migrations/ should be committed, but generated client is in node_modules

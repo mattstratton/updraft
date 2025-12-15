@@ -2,14 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma (required for Prisma Client on Alpine)
+RUN apk add --no-cache openssl openssl-dev
+
 # Copy package files
 COPY package*.json ./
 RUN npm install
 
+# Copy Prisma schema
+COPY prisma ./prisma
+
 # Copy source code
 COPY . .
 
+# Generate Prisma client (after copying everything)
+RUN npx prisma generate
+
 EXPOSE 3001
 
-CMD ["npm", "run", "dev"]
+# Generate Prisma client on startup as well (in case volumes override it)
+CMD ["sh", "-c", "npx prisma generate && npm run dev"]
 
