@@ -7,9 +7,24 @@ export const blueskyRouter = Router();
 // Helper function to get cache TTL (7 days in milliseconds)
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Cache version - increment this when the recap data structure changes
-// This will invalidate all old cached recaps
-const CACHE_VERSION = 2; // Incremented for threads, visualizations, and timezone support
+// Cache version - automatically generated from build time or git commit
+// This ensures cache invalidation when code changes are deployed
+// Railway sets RAILWAY_GIT_COMMIT_SHA, or we fall back to build timestamp
+const CACHE_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA || 
+                       process.env.RAILWAY_DEPLOYMENT_ID || 
+                       `build-${Date.now()}`;
+
+// Required fields that must exist in cached recap data for it to be valid
+// If any of these are missing, the cache is considered invalid
+const REQUIRED_CACHE_FIELDS = [
+  'profile',
+  'stats',
+  'patterns',
+  'topFans',
+  'topics',
+  'threads',      // New field - will invalidate old caches
+  'visualizations', // New field - will invalidate old caches
+];
 
 blueskyRouter.post('/recap', async (req, res) => {
   try {
@@ -33,22 +48,29 @@ blueskyRouter.post('/recap', async (req, res) => {
         where: { handle_year: { handle, year } },
       });
 
-      // Check if cache is valid: not expired AND matches current cache version
-      const cacheValid = cached && 
-                        cached.expiresAt > new Date() && 
-                        (cached.data as any)?._cacheVersion === CACHE_VERSION;
+      // Check if cache is valid: not expired AND has required fields
+      const cacheData = cached?.data as any;
+      const isExpired = !cached || cached.expiresAt <= new Date();
+      const hasRequiredFields = cacheData && REQUIRED_CACHE_FIELDS.every(field => 
+        cacheData[field] !== undefined && cacheData[field] !== null
+      );
+      const versionMatches = cacheData?._cacheVersion === CACHE_VERSION;
+      
+      const cacheValid = !isExpired && hasRequiredFields && versionMatches;
 
       if (cacheValid) {
         console.log(`Cache hit for ${handle} (${year})`);
         res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
-        return res.json(cached.data as any);
+        return res.json(cacheData);
       }
 
       if (cached) {
-        if ((cached.data as any)?._cacheVersion !== CACHE_VERSION) {
-          console.log(`Cache version mismatch for ${handle} (${year}), regenerating...`);
-        } else {
+        if (isExpired) {
           console.log(`Cache expired for ${handle} (${year}), regenerating...`);
+        } else if (!hasRequiredFields) {
+          console.log(`Cache missing required fields for ${handle} (${year}), regenerating...`);
+        } else if (!versionMatches) {
+          console.log(`Cache version mismatch for ${handle} (${year}) (cached: ${cacheData?._cacheVersion}, current: ${CACHE_VERSION}), regenerating...`);
         }
       }
     } catch (dbError) {
