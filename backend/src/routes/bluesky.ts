@@ -9,7 +9,7 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 blueskyRouter.post('/recap', async (req, res) => {
   try {
-    let { handle } = req.body;
+    let { handle, timezoneOffset } = req.body;
     
     if (!handle) {
       return res.status(400).json({ error: "Handle is required" });
@@ -19,6 +19,9 @@ blueskyRouter.post('/recap', async (req, res) => {
     // Bluesky handles are case-insensitive but should be normalized to lowercase
     handle = handle.trim().replace(/^@/, "").toLowerCase();
     const year = new Date().getFullYear();
+    
+    // Default to UTC (0) if timezoneOffset not provided (for backwards compatibility)
+    const tzOffsetMinutes = timezoneOffset !== undefined ? parseInt(timezoneOffset) : 0;
 
     // Check cache first
     try {
@@ -41,8 +44,8 @@ blueskyRouter.post('/recap', async (req, res) => {
     }
 
     // Generate new recap
-    console.log(`Generating new recap for ${handle} (${year})`);
-    const recap = await generateRecap(handle);
+    console.log(`Generating new recap for ${handle} (${year}) with timezone offset: ${tzOffsetMinutes} minutes`);
+    const recap = await generateRecap(handle, tzOffsetMinutes);
 
     // Save to cache
     try {

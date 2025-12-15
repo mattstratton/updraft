@@ -485,14 +485,6 @@ function analyzePosterType(posts: any[], totalPosts: number, totalReplies: numbe
     };
   }
 
-  // Power User
-  if (totalPosts > 1000) {
-    return {
-      type: "Power User",
-      description: `${totalPosts.toLocaleString()} posts? Touch grass. (But also, wow. That's a lot of thoughts.)`,
-    };
-  }
-
   // Night Owl
   if (nightOwlRatio > 0.4) {
     return {
@@ -540,6 +532,14 @@ function analyzePosterType(posts: any[], totalPosts: number, totalReplies: numbe
       description: "You post original thoughts and ignore replies. Main character energy, and honestly? We're here for it.",
     };
   }
+
+  // Power User
+    if (totalPosts > 1000) {
+      return {
+        type: "Power User",
+        description: `${totalPosts.toLocaleString()} posts? Touch grass. (But also, wow. That's a lot of thoughts.)`,
+      };
+    }
 
   // Default: Balanced
   return {
@@ -617,17 +617,17 @@ function analyzeEmojis(posts: any[]): { topEmojis: { emoji: string; count: numbe
   return { topEmojis, totalEmojis };
 }
 
-function analyzeEngagementTimeline(posts: any[]): { bestMonth: string; bestDay: string; bestHour: number; bestMonthAvg: number; bestDayAvg: number; bestHourAvg: number } {
+function analyzeEngagementTimeline(posts: any[], timezoneOffsetMinutes: number = 0): { bestMonth: string; bestDay: string; bestHour: number; bestMonthAvg: number; bestDayAvg: number; bestHourAvg: number } {
   // Calculate engagement per month/day/hour
   const monthEngagement: Record<string, { total: number; count: number }> = {};
   const dayEngagement: Record<string, { total: number; count: number }> = {};
   const hourEngagement: Record<number, { total: number; count: number }> = {};
 
   posts.forEach((item: any) => {
-    const date = new Date(item.post.record?.createdAt);
-    const month = date.toLocaleString('default', { month: 'long' });
-    const day = date.toLocaleString('default', { weekday: 'long' });
-    const hour = date.getHours();
+    const local = getLocalTimeComponents(item.post.record?.createdAt, timezoneOffsetMinutes);
+    const month = local.month;
+    const day = local.day;
+    const hour = local.hour;
     
     const engagement = (item.post.likeCount || 0) + (item.post.repostCount || 0) + (item.post.replyCount || 0);
     
@@ -815,7 +815,7 @@ function analyzeLinks(posts: any[]): { topDomains: { domain: string; count: numb
   return { topDomains, totalLinks, type, description };
 }
 
-function analyzeVisualizations(posts: any[], targetYear: number): { 
+function analyzeVisualizations(posts: any[], targetYear: number, timezoneOffsetMinutes: number = 0): { 
   monthlyPosts: { month: string; count: number }[];
   monthlyEngagement: { month: string; engagement: number }[];
   dailyActivity: { day: string; count: number }[];
@@ -842,9 +842,9 @@ function analyzeVisualizations(posts: any[], targetYear: number): {
   });
 
   posts.forEach((item: any) => {
-    const date = new Date(item.post.record?.createdAt);
-    const month = date.toLocaleString('default', { month: 'long' });
-    const day = date.toLocaleString('default', { weekday: 'long' });
+    const local = getLocalTimeComponents(item.post.record?.createdAt, timezoneOffsetMinutes);
+    const month = local.month;
+    const day = local.day;
     
     const engagement = (item.post.likeCount || 0) + (item.post.repostCount || 0) + (item.post.replyCount || 0);
     
@@ -872,6 +872,106 @@ function analyzeVisualizations(posts: any[], targetYear: number): {
     monthlyPosts: monthlyPostsArray,
     monthlyEngagement: monthlyEngagementArray,
     dailyActivity: dailyActivityArray,
+  };
+}
+
+function analyzeThreads(posts: any[]): {
+  longestThread: { text: string; replies: number; likes: number; reposts: number; uri: string } | null;
+  conversationStarters: { text: string; replies: number; likes: number; reposts: number; uri: string }[];
+  totalThreadsStarted: number;
+  avgRepliesPerThread: number;
+  type: string;
+  description: string;
+} {
+  // Find posts that started threads:
+  // 1. Must be a top-level post (not a reply itself) - check if record.reply is undefined/null
+  // 2. Must have replies (replyCount > 0)
+  const threadStarters = posts.filter((item: any) => {
+    const isTopLevelPost = !item.post.record?.reply; // Top-level posts don't have a reply field
+    const replyCount = item.post.replyCount || 0;
+    return isTopLevelPost && replyCount > 0;
+  });
+
+  const totalThreadsStarted = threadStarters.length;
+
+  // Find the longest thread (most replies)
+  let longestThread: any = null;
+  let maxReplies = 0;
+
+  threadStarters.forEach((item: any) => {
+    const replies = item.post.replyCount || 0;
+    if (replies > maxReplies) {
+      maxReplies = replies;
+      longestThread = item;
+    }
+  });
+
+  // Get top conversation starters (posts with most replies)
+  const conversationStarters = threadStarters
+    .map((item: any) => ({
+      text: item.post.record?.text || "",
+      replies: item.post.replyCount || 0,
+      likes: item.post.likeCount || 0,
+      reposts: item.post.repostCount || 0,
+      uri: item.post.uri,
+    }))
+    .sort((a, b) => b.replies - a.replies)
+    .slice(0, 5);
+
+  // Calculate average replies per thread
+  const totalReplies = threadStarters.reduce((sum: number, item: any) => {
+    return sum + (item.post.replyCount || 0);
+  }, 0);
+  const avgRepliesPerThread = totalThreadsStarted > 0 ? Math.round(totalReplies / totalThreadsStarted) : 0;
+
+  // Determine conversation starter type
+  let type = "Quiet Observer";
+  let description = "You mostly observe. Not much of a conversation starter, but that's okay.";
+
+  if (totalThreadsStarted === 0) {
+    return {
+      longestThread: null,
+      conversationStarters: [],
+      totalThreadsStarted: 0,
+      avgRepliesPerThread: 0,
+      type,
+      description,
+    };
+  }
+
+  const threadRatio = totalThreadsStarted / posts.length;
+  const avgReplies = avgRepliesPerThread;
+
+  if (threadRatio > 0.4 && avgReplies > 10) {
+    type = "Conversation Master";
+    description = "You're a conversation architect. Every post is a thread waiting to happen. People can't help but respond.";
+  } else if (threadRatio > 0.3 && avgReplies > 5) {
+    type = "Thread Starter";
+    description = "You know how to get people talking. Your posts spark discussions.";
+  } else if (threadRatio > 0.2) {
+    type = "Occasional Conversationalist";
+    description = "You start conversations when it matters. Quality over quantity.";
+  } else if (avgReplies > 15) {
+    type = "Selective Starter";
+    description = "You don't post often, but when you do, people respond. That's the power of good content.";
+  } else {
+    type = "Quiet Starter";
+    description = "You start threads, but they're more intimate. Small conversations, big connections.";
+  }
+
+  return {
+    longestThread: longestThread ? {
+      text: longestThread.post.record?.text || "",
+      replies: longestThread.post.replyCount || 0,
+      likes: longestThread.post.likeCount || 0,
+      reposts: longestThread.post.repostCount || 0,
+      uri: longestThread.post.uri,
+    } : null,
+    conversationStarters,
+    totalThreadsStarted,
+    avgRepliesPerThread,
+    type,
+    description,
   };
 }
 
@@ -1017,7 +1117,92 @@ function analyzePostingAge(posts: any[], totalPosts: number, totalReplies: numbe
   }
 }
 
-async function analyzeRecap(session: BlueskySession, posts: any[], profile: any, targetYear: number, fetchedIterations?: number, maxIterations?: number) {
+// Helper function to get local time components from a UTC timestamp
+// timezoneOffsetMinutes: offset from UTC in minutes (e.g., EST = -300, PST = -480)
+// Note: JavaScript's getTimezoneOffset() returns POSITIVE for timezones BEHIND UTC
+// So EST (UTC-5) returns +300, and we negate it to get -300
+// This function returns an object with local time components
+function getLocalTimeComponents(utcTimestamp: string, timezoneOffsetMinutes: number): {
+  date: Date;
+  month: string;
+  day: string;
+  hour: number;
+  dateStr: string;
+} {
+  // Parse the UTC timestamp - JavaScript Date parses ISO strings as UTC
+  const utcDate = new Date(utcTimestamp);
+  
+  // Get UTC components
+  const utcYear = utcDate.getUTCFullYear();
+  const utcMonth = utcDate.getUTCMonth();
+  const utcDateNum = utcDate.getUTCDate();
+  const utcHours = utcDate.getUTCHours();
+  const utcMinutes = utcDate.getUTCMinutes();
+  const utcSeconds = utcDate.getUTCSeconds();
+  
+  // Convert UTC to user's local time by adding offset
+  // timezoneOffsetMinutes is already negated from getTimezoneOffset (e.g., EST = -300)
+  const totalMinutes = utcMinutes + timezoneOffsetMinutes;
+  const localHours = (utcHours + Math.floor(totalMinutes / 60) + 24) % 24;
+  const localMinutes = (totalMinutes % 60 + 60) % 60;
+  
+  // Calculate date adjustments for day/month/year boundaries
+  let localYear = utcYear;
+  let localMonth = utcMonth;
+  let localDateNum = utcDateNum;
+  
+  // Handle day rollover
+  const hoursDiff = Math.floor((utcMinutes + timezoneOffsetMinutes) / 60);
+  const adjustedHours = utcHours + hoursDiff;
+  
+  if (adjustedHours < 0) {
+    // Previous day
+    localDateNum--;
+    if (localDateNum < 1) {
+      localMonth--;
+      if (localMonth < 0) {
+        localMonth = 11;
+        localYear--;
+      }
+      // Get days in previous month
+      const daysInPrevMonth = new Date(localYear, localMonth + 1, 0).getDate();
+      localDateNum = daysInPrevMonth;
+    }
+  } else if (adjustedHours >= 24) {
+    // Next day
+    localDateNum++;
+    const daysInMonth = new Date(localYear, localMonth + 1, 0).getDate();
+    if (localDateNum > daysInMonth) {
+      localDateNum = 1;
+      localMonth++;
+      if (localMonth > 11) {
+        localMonth = 0;
+        localYear++;
+      }
+    }
+  }
+  
+  // Create a Date object in UTC that represents the local time
+  // We'll use this for formatting, but extract components manually
+  const localDate = new Date(Date.UTC(localYear, localMonth, localDateNum, localHours, localMinutes, utcSeconds));
+  
+  // Format month and day names
+  const month = localDate.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
+  const day = localDate.toLocaleString('default', { weekday: 'long', timeZone: 'UTC' });
+  
+  // Format date string (YYYY-MM-DD)
+  const dateStr = `${localYear}-${String(localMonth + 1).padStart(2, '0')}-${String(localDateNum).padStart(2, '0')}`;
+  
+  return {
+    date: localDate,
+    month,
+    day,
+    hour: localHours,
+    dateStr,
+  };
+}
+
+async function analyzeRecap(session: BlueskySession, posts: any[], profile: any, targetYear: number, fetchedIterations?: number, maxIterations?: number, timezoneOffsetMinutes: number = 0) {
   console.log(`Analyzing recap: ${posts.length} total posts fetched, profile DID: ${profile.did}`);
   
   const ownPosts = posts.filter((item: any) => item.post.author.did === profile.did);
@@ -1058,11 +1243,11 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
   const postDates = new Set<string>();
   
   ownPosts.forEach((item: any) => {
-    const date = new Date(item.post.record?.createdAt);
-    const month = date.toLocaleString('default', { month: 'long' });
-    const day = date.toLocaleString('default', { weekday: 'long' });
-    const hour = date.getHours();
-    const dateStr = date.toISOString().split('T')[0];
+    const local = getLocalTimeComponents(item.post.record?.createdAt, timezoneOffsetMinutes);
+    const month = local.month;
+    const day = local.day;
+    const hour = local.hour;
+    const dateStr = local.dateStr;
     
     monthCounts[month] = (monthCounts[month] || 0) + 1;
     dayCounts[day] = (dayCounts[day] || 0) + 1;
@@ -1168,7 +1353,11 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
 
   // Analyze posting frequency and engagement trends for visualizations
   console.log("Analyzing posting frequency and engagement trends...");
-  const visualizations = analyzeVisualizations(ownPosts, targetYear);
+  const visualizations = analyzeVisualizations(ownPosts, targetYear, timezoneOffsetMinutes);
+
+  // Analyze threads and conversation starters
+  console.log("Analyzing threads...");
+  const threadAnalysis = analyzeThreads(ownPosts);
 
   // Check if data was potentially truncated
   const isTruncated = fetchedIterations !== undefined && maxIterations !== undefined && fetchedIterations >= maxIterations;
@@ -1242,6 +1431,7 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
     milestones: milestones,
     links: linkAnalysis,
     visualizations: visualizations,
+    threads: threadAnalysis,
     year: targetYear,
     truncated: isTruncated,
     _debug: {
@@ -1254,7 +1444,7 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
 }
 
 // Main function to generate a recap for a Bluesky handle
-export async function generateRecap(handle: string) {
+export async function generateRecap(handle: string, timezoneOffsetMinutes: number = 0) {
   console.log(`Fetching recap for handle: ${handle}`);
 
   const session = await createSession();

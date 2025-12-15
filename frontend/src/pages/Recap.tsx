@@ -132,11 +132,19 @@ interface RecapData {
     monthlyEngagement: { month: string; engagement: number }[];
     dailyActivity: { day: string; count: number }[];
   };
+  threads?: {
+    longestThread: { text: string; replies: number; likes: number; reposts: number; uri: string } | null;
+    conversationStarters: { text: string; replies: number; likes: number; reposts: number; uri: string }[];
+    totalThreadsStarted: number;
+    avgRepliesPerThread: number;
+    type: string;
+    description: string;
+  };
   year: number;
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "firstPost", "stats", "mostLiked", "mostReposted", "mostReplied", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "emojis", "media", "links", "visualizations", "engagementTimeline", "milestones", "summary", "finale", "credits"];
+const cardVariants: CardVariant[] = ["intro", "firstPost", "stats", "mostLiked", "mostReposted", "mostReplied", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "emojis", "media", "links", "visualizations", "threads", "engagementTimeline", "milestones", "summary", "finale", "credits"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -146,6 +154,11 @@ export default function Recap() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  
+  // Swipe gesture state
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const minSwipeDistance = 50; // Minimum distance in pixels to trigger a swipe
 
   // Auto-fetch if user param is present
   useEffect(() => {
@@ -182,14 +195,22 @@ export default function Recap() {
         apiUrl = `https://${apiUrl}`;
       }
       
-      console.log('Calling API at:', `${apiUrl}/api/recap`);
+      // Get user's timezone offset (in minutes from UTC)
+      // getTimezoneOffset() returns positive for timezones BEHIND UTC (e.g., EST = +300)
+      // We negate it to get the standard offset (EST = -300)
+      const timezoneOffset = -new Date().getTimezoneOffset();
+      
+      console.log('Calling API at:', `${apiUrl}/api/recap`, 'with timezone offset:', timezoneOffset);
       
       const response = await fetch(`${apiUrl}/api/recap`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ handle: cleanHandle }),
+        body: JSON.stringify({ 
+          handle: cleanHandle,
+          timezoneOffset: timezoneOffset,
+        }),
       });
 
       // Check if response is actually JSON (not HTML error page)
@@ -244,12 +265,18 @@ export default function Recap() {
         apiUrl = `https://${apiUrl}`;
       }
 
+      // Get user's timezone offset (in minutes from UTC)
+      const timezoneOffset = -new Date().getTimezoneOffset();
+      
       const response = await fetch(`${apiUrl}/api/recap/regenerate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ handle: recap.profile.handle }),
+        body: JSON.stringify({ 
+          handle: recap.profile.handle,
+          timezoneOffset: timezoneOffset,
+        }),
       });
 
       if (!response.ok) {
@@ -641,6 +668,39 @@ export default function Recap() {
     setCurrentIndex((prev) => (prev - 1 + cardVariants.length) % cardVariants.length);
   };
 
+  // Swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    
+    // Check if this was a horizontal swipe (not a scroll)
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+    
+    if (isHorizontalSwipe && Math.abs(deltaX) > minSwipeDistance) {
+      if (deltaX > 0) {
+        // Swipe right - go to previous card
+        prevCard();
+      } else {
+        // Swipe left - go to next card
+        nextCard();
+      }
+    }
+    
+    // Reset touch start positions
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   const getCardData = (variant: CardVariant) => {
     if (!recap) return null;
     return {
@@ -694,6 +754,12 @@ export default function Recap() {
       monthlyPosts: recap.visualizations?.monthlyPosts,
       monthlyEngagement: recap.visualizations?.monthlyEngagement,
       dailyActivity: recap.visualizations?.dailyActivity,
+      threadType: recap.threads?.type,
+      threadDescription: recap.threads?.description,
+      longestThread: recap.threads?.longestThread,
+      conversationStarters: recap.threads?.conversationStarters,
+      totalThreadsStarted: recap.threads?.totalThreadsStarted,
+      avgRepliesPerThread: recap.threads?.avgRepliesPerThread,
       bestMonth: recap.engagementTimeline?.bestMonth,
       bestDay: recap.engagementTimeline?.bestDay,
       bestHour: recap.engagementTimeline?.bestHour,
@@ -766,7 +832,11 @@ export default function Recap() {
             </button>
 
             {/* Card */}
-            <div className="transition-all duration-300 flex justify-center">
+            <div 
+              className="transition-all duration-300 flex justify-center touch-none"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               {cardData && <StoryCard ref={cardRef} data={cardData} />}
             </div>
 

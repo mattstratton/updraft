@@ -30,7 +30,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "firstPost" | "stats" | "mostLiked" | "mostReposted" | "mostReplied" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "emojis" | "media" | "links" | "visualizations" | "engagementTimeline" | "milestones" | "summary" | "finale" | "credits";
+export type CardVariant = "intro" | "firstPost" | "stats" | "mostLiked" | "mostReposted" | "mostReplied" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "emojis" | "media" | "links" | "visualizations" | "threads" | "engagementTimeline" | "milestones" | "summary" | "finale" | "credits";
 
 interface TopFan {
   handle: string;
@@ -105,6 +105,13 @@ interface StoryCardData {
   monthlyPosts?: { month: string; count: number }[];
   monthlyEngagement?: { month: string; engagement: number }[];
   dailyActivity?: { day: string; count: number }[];
+  // Threads
+  threadType?: string;
+  threadDescription?: string;
+  longestThread?: { text: string; replies: number; likes: number; reposts: number } | null;
+  conversationStarters?: { text: string; replies: number; likes: number; reposts: number }[];
+  totalThreadsStarted?: number;
+  avgRepliesPerThread?: number;
   // Engagement timeline
   bestMonth?: string;
   bestDay?: string;
@@ -253,6 +260,10 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   visualizations: {
     title: "Your year visualized",
     tagline: "See your activity patterns.",
+  },
+  threads: {
+    title: "You're a",
+    tagline: "Your conversation style, revealed.",
   },
   engagementTimeline: {
     title: "Your golden hour",
@@ -767,6 +778,53 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
               </>
             ) : (
               <p className="text-muted-foreground text-center">Not enough data for visualizations</p>
+            )}
+          </div>
+        );
+
+      case "threads":
+        return (
+          <div className="space-y-6 w-full">
+            <div className="text-center">
+              <span className="text-5xl font-bold text-primary">
+                {data.threadType || "Quiet Observer"}
+              </span>
+            </div>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto text-center">
+              {data.threadDescription || "You mostly observe."}
+            </p>
+            {data.longestThread ? (
+              <>
+                <div className="pt-4 border-t border-border/30">
+                  <p className="text-sm text-muted-foreground mb-3 text-center">Your longest thread</p>
+                  <div className="bg-muted/50 rounded-lg p-4 border border-border/50 mb-4">
+                    <p className="text-sm text-foreground leading-relaxed line-clamp-3 mb-3">
+                      {data.longestThread.text}
+                    </p>
+                    <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                      <span>💬 {formatNumber(data.longestThread.replies)} replies</span>
+                      <span>❤️ {formatNumber(data.longestThread.likes)}</span>
+                      <span>🔄 {formatNumber(data.longestThread.reposts)}</span>
+                    </div>
+                  </div>
+                </div>
+                {data.totalThreadsStarted !== undefined && (
+                  <div className="text-center space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      Started {formatNumber(data.totalThreadsStarted)} {data.totalThreadsStarted === 1 ? 'thread' : 'threads'}
+                    </p>
+                    {data.avgRepliesPerThread !== undefined && data.avgRepliesPerThread > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Avg. {formatNumber(data.avgRepliesPerThread)} replies per thread
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center pt-4">
+                No threads started this year
+              </p>
             )}
           </div>
         );
