@@ -37,10 +37,18 @@ app.get('/api/proxy-image', async (req, res) => {
       return res.status(400).json({ error: 'Invalid URL' });
     }
 
-    // Only allow Bluesky CDN URLs for security
-    if (!imageUrl.includes('cdn.bsky.app')) {
-      return res.status(403).json({ error: 'Only Bluesky CDN URLs are allowed' });
-    }
+          // Only allow Bluesky CDN URLs and common image domains for security
+          const allowedDomains = [
+            'cdn.bsky.app',
+            'bsky.app',
+            'blueskyweb.xyz',
+            'bluesky.social'
+          ];
+          
+          const isAllowed = allowedDomains.some(domain => imageUrl.includes(domain));
+          if (!isAllowed) {
+            return res.status(403).json({ error: 'Only Bluesky CDN URLs are allowed' });
+          }
 
     // Fetch the image
     const response = await fetch(imageUrl);

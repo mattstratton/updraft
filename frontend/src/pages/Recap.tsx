@@ -63,11 +63,75 @@ interface RecapData {
     year: string;
     description: string;
   };
+  firstPost?: {
+    text: string;
+    likes: number;
+    reposts: number;
+    replies: number;
+    uri: string;
+    createdAt: string;
+  } | null;
+  mostLikedPost?: {
+    text: string;
+    likes: number;
+    reposts: number;
+    replies: number;
+    uri: string;
+  } | null;
+  mostRepostedPost?: {
+    text: string;
+    likes: number;
+    reposts: number;
+    replies: number;
+    uri: string;
+  } | null;
+  mostRepliedPost?: {
+    text: string;
+    likes: number;
+    reposts: number;
+    replies: number;
+    uri: string;
+  } | null;
+  emojis?: {
+    topEmojis: { emoji: string; count: number }[];
+    totalEmojis: number;
+  };
+  media?: {
+    mediaPosts: number;
+    mediaRatio: number;
+    type: string;
+    description: string;
+  };
+  engagementTimeline?: {
+    bestMonth: string;
+    bestDay: string;
+    bestHour: number;
+    bestMonthAvg: number;
+    bestDayAvg: number;
+    bestHourAvg: number;
+  };
+  milestones?: {
+    milestones: {
+      postNumber: number;
+      text: string;
+      likes: number;
+      reposts: number;
+      replies: number;
+      uri: string;
+      createdAt: string;
+    }[];
+  };
+  links?: {
+    topDomains: { domain: string; count: number }[];
+    totalLinks: number;
+    type: string;
+    description: string;
+  };
   year: number;
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "summary", "finale", "credits"];
+const cardVariants: CardVariant[] = ["intro", "firstPost", "stats", "mostLiked", "mostReposted", "mostReplied", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "emojis", "media", "links", "engagementTimeline", "milestones", "summary", "finale", "credits"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -203,13 +267,28 @@ export default function Recap() {
 
   // Helper function to proxy image through backend to avoid CORS
   const proxyImage = async (url: string): Promise<string> => {
-    if (!url.includes('cdn.bsky.app')) {
-      return url; // Return original URL if not from Bluesky CDN
+    // Proxy all external images (Bluesky CDN and other external sources)
+    // This ensures CORS works properly for html2canvas
+    if (!url || url.startsWith('data:') || url.startsWith('blob:')) {
+      return url; // Return data URLs and blob URLs as-is
     }
     
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const proxyUrl = `${apiUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
-    return proxyUrl;
+    // Check if it's an external URL
+    try {
+      const urlObj = new URL(url);
+      // If it's not from the same origin, proxy it
+      if (urlObj.origin !== window.location.origin) {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        // Ensure API URL has protocol
+        const baseUrl = apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`;
+        const proxyUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        return proxyUrl;
+      }
+    } catch (e) {
+      // Invalid URL, return as-is
+    }
+    
+    return url;
   };
 
   const handleShareImage = async () => {
@@ -235,19 +314,35 @@ export default function Recap() {
       const conversionPromises: Promise<void>[] = [];
 
       images.forEach((img, index) => {
-        if (img.src && img.src.startsWith('http')) {
+        if (img.src && (img.src.startsWith('http://') || img.src.startsWith('https://'))) {
           originalSrcs[index] = img.src;
           conversionPromises.push(
             proxyImage(img.src).then((proxyUrl) => {
-              img.src = proxyUrl;
+              // Create a new image to preload it through the proxy
+              return new Promise<void>((resolve) => {
+                const preloadImg = new Image();
+                preloadImg.crossOrigin = 'anonymous';
+                preloadImg.onload = () => {
+                  img.src = proxyUrl;
+                  img.crossOrigin = 'anonymous';
+                  resolve();
+                };
+                preloadImg.onerror = () => {
+                  // If proxy fails, try to use original with crossOrigin
+                  img.crossOrigin = 'anonymous';
+                  resolve();
+                };
+                preloadImg.src = proxyUrl;
+              });
             }).catch(() => {
-              // Keep original src if proxy fails
+              // Keep original src if proxy fails, but set crossOrigin
+              img.crossOrigin = 'anonymous';
             })
           );
         }
       });
 
-      // Wait for all images to be proxied
+      // Wait for all images to be proxied and preloaded
       await Promise.all(conversionPromises);
       
       // Wait for images to load and fonts to be ready
@@ -435,7 +530,7 @@ export default function Recap() {
             }
             
             // Force a reflow to ensure styles are applied
-            clonedCard.offsetHeight;
+            void clonedCard.offsetHeight;
           }
         },
       });
@@ -570,6 +665,34 @@ export default function Recap() {
       postingAge: recap.postingAge?.era,
       postingAgeYear: recap.postingAge?.year,
       postingAgeDescription: recap.postingAge?.description,
+      firstPostText: recap.firstPost?.text,
+      firstPostLikes: recap.firstPost?.likes,
+      firstPostReposts: recap.firstPost?.reposts,
+      firstPostReplies: recap.firstPost?.replies,
+      firstPostCreatedAt: recap.firstPost?.createdAt,
+      mostLikedText: recap.mostLikedPost?.text,
+      mostLikedLikes: recap.mostLikedPost?.likes,
+      mostRepostedText: recap.mostRepostedPost?.text,
+      mostRepostedReposts: recap.mostRepostedPost?.reposts,
+      mostRepliedText: recap.mostRepliedPost?.text,
+      mostRepliedReplies: recap.mostRepliedPost?.replies,
+      topEmojis: recap.emojis?.topEmojis,
+      totalEmojis: recap.emojis?.totalEmojis,
+      mediaType: recap.media?.type,
+      mediaDescription: recap.media?.description,
+      mediaPosts: recap.media?.mediaPosts,
+      mediaRatio: recap.media?.mediaRatio,
+      linkType: recap.links?.type || "Text-only",
+      linkDescription: recap.links?.description || "You keep it simple. No links, no distractions.",
+      topDomains: recap.links?.topDomains || [],
+      totalLinks: recap.links?.totalLinks || 0,
+      bestMonth: recap.engagementTimeline?.bestMonth,
+      bestDay: recap.engagementTimeline?.bestDay,
+      bestHour: recap.engagementTimeline?.bestHour,
+      bestMonthAvg: recap.engagementTimeline?.bestMonthAvg,
+      bestDayAvg: recap.engagementTimeline?.bestDayAvg,
+      bestHourAvg: recap.engagementTimeline?.bestHourAvg,
+      milestones: recap.milestones?.milestones,
     };
   };
 

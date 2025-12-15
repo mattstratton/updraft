@@ -548,6 +548,315 @@ function analyzePosterType(posts: any[], totalPosts: number, totalReplies: numbe
   };
 }
 
+function analyzeEmojis(posts: any[]): { topEmojis: { emoji: string; count: number }[]; totalEmojis: number } {
+  const emojiCounts: Record<string, number> = {};
+  let totalEmojis = 0;
+
+  // Match emoji sequences: base emoji + optional modifiers (skin tone, zero-width joiner, variation selector)
+  // This regex matches complete emoji sequences, not individual code points
+  const emojiRegex = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F?/gu;
+
+  // Specific code points to exclude (these are symbols but not emojis)
+  const excludedCodePoints = new Set([
+    0x2640, // ♀ Female sign
+    0x2642, // ♂ Male sign
+    0x2648, 0x2649, 0x264A, 0x264B, 0x264C, 0x264D, 0x264E, 0x264F, // Zodiac signs
+    0x2713, // ✓ Check mark
+    0x2714, // ✔ Heavy check mark
+    0x2715, // ✕ Multiplication X
+    0x2716, // ✖ Heavy multiplication X
+    0x2717, // ✗ Ballot X
+    0x2718, // ✘ Heavy ballot X
+  ]);
+
+  posts.forEach((item: any) => {
+    const text = item.post.record?.text || "";
+    
+    // Match emoji sequences
+    let match;
+    const regex = new RegExp(emojiRegex.source, emojiRegex.flags);
+    while ((match = regex.exec(text)) !== null) {
+      const emoji = match[0];
+      
+      // Skip if it's a single ASCII character
+      if (emoji.length === 1 && emoji.charCodeAt(0) < 128) continue;
+      
+      // Check if the first code point is excluded
+      const firstCodePoint = emoji.codePointAt(0);
+      if (firstCodePoint && excludedCodePoints.has(firstCodePoint)) continue;
+      
+      // Only count if it's actually an emoji (has emoji presentation or is in emoji ranges)
+      // This filters out things like digits, letters, and basic punctuation
+      const codePoint = emoji.codePointAt(0);
+      if (codePoint) {
+        // Skip ASCII and basic Latin
+        if (codePoint < 0x80) continue;
+        
+        // Skip if it's just a digit
+        if (codePoint >= 0x30 && codePoint <= 0x39) continue;
+        
+        // Skip common arrows and symbols that aren't emojis
+        if (codePoint >= 0x2190 && codePoint <= 0x21FF) {
+          // But allow some emoji-like arrows
+          if (![0x2194, 0x2195, 0x2196, 0x2197, 0x2198, 0x2199].includes(codePoint)) {
+            continue;
+          }
+        }
+      }
+      
+      emojiCounts[emoji] = (emojiCounts[emoji] || 0) + 1;
+      totalEmojis++;
+    }
+  });
+
+  const topEmojis = Object.entries(emojiCounts)
+    .map(([emoji, count]) => ({ emoji, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  return { topEmojis, totalEmojis };
+}
+
+function analyzeEngagementTimeline(posts: any[]): { bestMonth: string; bestDay: string; bestHour: number; bestMonthAvg: number; bestDayAvg: number; bestHourAvg: number } {
+  // Calculate engagement per month/day/hour
+  const monthEngagement: Record<string, { total: number; count: number }> = {};
+  const dayEngagement: Record<string, { total: number; count: number }> = {};
+  const hourEngagement: Record<number, { total: number; count: number }> = {};
+
+  posts.forEach((item: any) => {
+    const date = new Date(item.post.record?.createdAt);
+    const month = date.toLocaleString('default', { month: 'long' });
+    const day = date.toLocaleString('default', { weekday: 'long' });
+    const hour = date.getHours();
+    
+    const engagement = (item.post.likeCount || 0) + (item.post.repostCount || 0) + (item.post.replyCount || 0);
+    
+    // Month
+    if (!monthEngagement[month]) {
+      monthEngagement[month] = { total: 0, count: 0 };
+    }
+    monthEngagement[month].total += engagement;
+    monthEngagement[month].count += 1;
+    
+    // Day
+    if (!dayEngagement[day]) {
+      dayEngagement[day] = { total: 0, count: 0 };
+    }
+    dayEngagement[day].total += engagement;
+    dayEngagement[day].count += 1;
+    
+    // Hour
+    if (!hourEngagement[hour]) {
+      hourEngagement[hour] = { total: 0, count: 0 };
+    }
+    hourEngagement[hour].total += engagement;
+    hourEngagement[hour].count += 1;
+  });
+
+  // Find best performing periods
+  let bestMonth = "Unknown";
+  let bestMonthAvg = 0;
+  let bestDay = "Unknown";
+  let bestDayAvg = 0;
+  let bestHour = 12;
+  let bestHourAvg = 0;
+
+  Object.entries(monthEngagement).forEach(([month, data]) => {
+    const avg = data.count > 0 ? data.total / data.count : 0;
+    if (avg > bestMonthAvg) {
+      bestMonthAvg = avg;
+      bestMonth = month;
+    }
+  });
+
+  Object.entries(dayEngagement).forEach(([day, data]) => {
+    const avg = data.count > 0 ? data.total / data.count : 0;
+    if (avg > bestDayAvg) {
+      bestDayAvg = avg;
+      bestDay = day;
+    }
+  });
+
+  Object.entries(hourEngagement).forEach(([hourStr, data]) => {
+    const hour = parseInt(hourStr);
+    const avg = data.count > 0 ? data.total / data.count : 0;
+    if (avg > bestHourAvg) {
+      bestHourAvg = avg;
+      bestHour = hour;
+    }
+  });
+
+  return {
+    bestMonth,
+    bestDay,
+    bestHour,
+    bestMonthAvg: Math.round(bestMonthAvg),
+    bestDayAvg: Math.round(bestDayAvg),
+    bestHourAvg: Math.round(bestHourAvg),
+  };
+}
+
+function findMilestones(posts: any[], totalPosts: number): { milestones: { postNumber: number; text: string; likes: number; reposts: number; replies: number; uri: string; createdAt: string }[] } {
+  const milestones: { postNumber: number; text: string; likes: number; reposts: number; replies: number; uri: string; createdAt: string }[] = [];
+  
+  // Sort posts chronologically (oldest first)
+  const sortedPosts = [...posts].sort((a, b) => {
+    const dateA = new Date(a.post.record?.createdAt || 0).getTime();
+    const dateB = new Date(b.post.record?.createdAt || 0).getTime();
+    return dateA - dateB;
+  });
+
+  // Define milestone thresholds
+  const thresholds = [100, 500, 1000, 2500, 5000, 10000];
+  
+  thresholds.forEach((threshold) => {
+    if (totalPosts >= threshold) {
+      const postIndex = threshold - 1; // 0-indexed
+      if (postIndex < sortedPosts.length) {
+        const post = sortedPosts[postIndex];
+        milestones.push({
+          postNumber: threshold,
+          text: post.post.record?.text || "",
+          likes: post.post.likeCount || 0,
+          reposts: post.post.repostCount || 0,
+          replies: post.post.replyCount || 0,
+          uri: post.post.uri,
+          createdAt: post.post.record?.createdAt || "",
+        });
+      }
+    }
+  });
+
+  // Also add the first post if we have it
+  if (sortedPosts.length > 0) {
+    const firstPost = sortedPosts[0];
+    milestones.push({
+      postNumber: 1,
+      text: firstPost.post.record?.text || "",
+      likes: firstPost.post.likeCount || 0,
+      reposts: firstPost.post.repostCount || 0,
+      replies: firstPost.post.replyCount || 0,
+      uri: firstPost.post.uri,
+      createdAt: firstPost.post.record?.createdAt || "",
+    });
+  }
+
+  // Sort by post number
+  milestones.sort((a, b) => a.postNumber - b.postNumber);
+
+  return { milestones };
+}
+
+function analyzeLinks(posts: any[]): { topDomains: { domain: string; count: number }[]; totalLinks: number; type: string; description: string } {
+  const domainCounts: Record<string, number> = {};
+  let totalLinks = 0;
+
+  // URL regex pattern - matches http/https URLs
+  const urlRegex = /https?:\/\/(?:[-\w.])+(?::[0-9]+)?(?:\/(?:[\w\/_.])*)?(?:\?(?:[\w&=%.])*)?(?:#(?:[\w.])*)?/gi;
+
+  posts.forEach((item: any) => {
+    const text = item.post.record?.text || "";
+    const matches = text.match(urlRegex);
+    
+    if (matches) {
+      matches.forEach((url: string) => {
+        try {
+          const urlObj = new URL(url);
+          const hostname = urlObj.hostname;
+          
+          // Remove www. prefix for cleaner display
+          const domain = hostname.replace(/^www\./, '');
+          
+          // Skip common Bluesky/internal domains
+          if (domain.includes('bsky.app') || domain.includes('bluesky')) {
+            return;
+          }
+          
+          domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+          totalLinks++;
+        } catch (e) {
+          // Invalid URL, skip
+        }
+      });
+    }
+  });
+
+  const topDomains = Object.entries(domainCounts)
+    .map(([domain, count]) => ({ domain, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  // Determine curator type based on link sharing patterns
+  let type = "Text-only";
+  let description = "You keep it simple. No links, no distractions. Pure thoughts.";
+
+  if (totalLinks === 0 || topDomains.length === 0) {
+    return { topDomains: [], totalLinks: 0, type, description };
+  }
+
+  // If we have domains, we should classify them properly
+  const linkRatio = totalLinks / posts.length;
+  
+  if (linkRatio > 0.3) {
+    type = "Link Curator";
+    description = "You're a digital librarian. Constantly sharing the best of the web. Everyone's favorite link source.";
+  } else if (linkRatio > 0.15) {
+    type = "Selective Sharer";
+    description = "You share links, but only the good stuff. Quality over quantity.";
+  } else if (linkRatio > 0.05) {
+    type = "Occasional Linker";
+    description = "You share links when they matter. Not spam, just substance.";
+  } else {
+    // Even if ratio is low, if they have links, they're a link sharer
+    type = "Link Sharer";
+    description = "You share links, even if sparingly. Quality over quantity.";
+  }
+
+  return { topDomains, totalLinks, type, description };
+}
+
+function analyzeMedia(posts: any[], totalPosts: number): { mediaPosts: number; mediaRatio: number; type: string; description: string } {
+  let mediaPosts = 0;
+  let imagePosts = 0;
+  let videoPosts = 0;
+
+  posts.forEach((item: any) => {
+    const embed = item.post.record?.embed;
+    if (embed) {
+      if (embed.$type === 'app.bsky.embed.images') {
+        mediaPosts++;
+        imagePosts++;
+      } else if (embed.$type === 'app.bsky.embed.video') {
+        mediaPosts++;
+        videoPosts++;
+      }
+    }
+  });
+
+  const mediaRatio = totalPosts > 0 ? mediaPosts / totalPosts : 0;
+
+  let type = "Text-only";
+  let description = "Words are your medium. No images, no videos, just pure text. Old school.";
+
+  if (mediaRatio > 0.5) {
+    if (imagePosts > videoPosts * 2) {
+      type = "Visual Storyteller";
+      description = "You speak in images. Every post is a picture worth a thousand words. Instagram who?";
+    } else if (videoPosts > imagePosts) {
+      type = "Video Creator";
+      description = "You're all about that moving picture life. TikTok energy, Bluesky platform.";
+    } else {
+      type = "Multimedia Master";
+      description = "Images, videos, text - you do it all. A true content creator.";
+    }
+  } else if (mediaRatio > 0.2) {
+    type = "Balanced";
+    description = "You mix it up. Sometimes words, sometimes visuals. Versatile.";
+  }
+
+  return { mediaPosts, mediaRatio, type, description };
+}
+
 function analyzePostingAge(posts: any[], totalPosts: number, totalReplies: number): { era: string; year: string; description: string } {
   if (totalPosts === 0) {
     return {
@@ -741,6 +1050,62 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
   console.log("Analyzing posting age...");
   const postingAge = analyzePostingAge(ownPosts, totalPosts, totalReplies);
 
+  // Find first post of the year
+  const firstPost = ownPosts.length > 0 
+    ? ownPosts.reduce((earliest: any, post: any) => {
+        const earliestDate = new Date(earliest.post.record?.createdAt);
+        const postDate = new Date(post.post.record?.createdAt);
+        return postDate < earliestDate ? post : earliest;
+      })
+    : null;
+
+  // Find separate top posts by engagement type
+  let mostLikedPost = ownPosts[0];
+  let mostRepostedPost = ownPosts[0];
+  let mostRepliedPost = ownPosts[0];
+  let maxLikes = 0;
+  let maxReposts = 0;
+  let maxReplies = 0;
+
+  ownPosts.forEach((item: any) => {
+    const likes = item.post.likeCount || 0;
+    const reposts = item.post.repostCount || 0;
+    const replies = item.post.replyCount || 0;
+    
+    if (likes > maxLikes) {
+      maxLikes = likes;
+      mostLikedPost = item;
+    }
+    if (reposts > maxReposts) {
+      maxReposts = reposts;
+      mostRepostedPost = item;
+    }
+    if (replies > maxReplies) {
+      maxReplies = replies;
+      mostRepliedPost = item;
+    }
+  });
+
+  // Analyze emojis
+  console.log("Analyzing emojis...");
+  const emojiAnalysis = analyzeEmojis(ownPosts);
+
+  // Analyze media usage
+  console.log("Analyzing media...");
+  const mediaAnalysis = analyzeMedia(ownPosts, totalPosts);
+
+  // Analyze engagement timeline
+  console.log("Analyzing engagement timeline...");
+  const engagementTimeline = analyzeEngagementTimeline(ownPosts);
+
+  // Find milestone moments
+  console.log("Finding milestone moments...");
+  const milestones = findMilestones(ownPosts, totalPosts);
+
+  // Analyze link/domain sharing
+  console.log("Analyzing link/domain sharing...");
+  const linkAnalysis = analyzeLinks(ownPosts);
+
   // Check if data was potentially truncated
   const isTruncated = fetchedIterations !== undefined && maxIterations !== undefined && fetchedIterations >= maxIterations;
 
@@ -778,6 +1143,40 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
     topics,
     posterType,
     postingAge,
+    firstPost: firstPost ? {
+      text: firstPost.post.record?.text || "",
+      likes: firstPost.post.likeCount || 0,
+      reposts: firstPost.post.repostCount || 0,
+      replies: firstPost.post.replyCount || 0,
+      uri: firstPost.post.uri,
+      createdAt: firstPost.post.record?.createdAt,
+    } : null,
+    mostLikedPost: mostLikedPost ? {
+      text: mostLikedPost.post.record?.text || "",
+      likes: mostLikedPost.post.likeCount || 0,
+      reposts: mostLikedPost.post.repostCount || 0,
+      replies: mostLikedPost.post.replyCount || 0,
+      uri: mostLikedPost.post.uri,
+    } : null,
+    mostRepostedPost: mostRepostedPost ? {
+      text: mostRepostedPost.post.record?.text || "",
+      likes: mostRepostedPost.post.likeCount || 0,
+      reposts: mostRepostedPost.post.repostCount || 0,
+      replies: mostRepostedPost.post.replyCount || 0,
+      uri: mostRepostedPost.post.uri,
+    } : null,
+    mostRepliedPost: mostRepliedPost ? {
+      text: mostRepliedPost.post.record?.text || "",
+      likes: mostRepliedPost.post.likeCount || 0,
+      reposts: mostRepliedPost.post.repostCount || 0,
+      replies: mostRepliedPost.post.replyCount || 0,
+      uri: mostRepliedPost.post.uri,
+    } : null,
+    emojis: emojiAnalysis,
+    media: mediaAnalysis,
+    engagementTimeline: engagementTimeline,
+    milestones: milestones,
+    links: linkAnalysis,
     year: targetYear,
     truncated: isTruncated,
     _debug: {

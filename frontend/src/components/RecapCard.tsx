@@ -29,7 +29,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "summary" | "finale" | "credits";
+export type CardVariant = "intro" | "firstPost" | "stats" | "mostLiked" | "mostReposted" | "mostReplied" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "emojis" | "media" | "links" | "engagementTimeline" | "milestones" | "summary" | "finale" | "credits";
 
 interface TopFan {
   handle: string;
@@ -74,6 +74,48 @@ interface StoryCardData {
   postingAge?: string;
   postingAgeYear?: string;
   postingAgeDescription?: string;
+  // First post
+  firstPostText?: string;
+  firstPostLikes?: number;
+  firstPostReposts?: number;
+  firstPostReplies?: number;
+  firstPostCreatedAt?: string;
+  // Separate engagement posts
+  mostLikedText?: string;
+  mostLikedLikes?: number;
+  mostRepostedText?: string;
+  mostRepostedReposts?: number;
+  mostRepliedText?: string;
+  mostRepliedReplies?: number;
+  // Emojis
+  topEmojis?: { emoji: string; count: number }[];
+  totalEmojis?: number;
+  // Media
+  mediaType?: string;
+  mediaDescription?: string;
+  mediaPosts?: number;
+  mediaRatio?: number;
+  // Links
+  linkType?: string;
+  linkDescription?: string;
+  topDomains?: { domain: string; count: number }[];
+  totalLinks?: number;
+  // Engagement timeline
+  bestMonth?: string;
+  bestDay?: string;
+  bestHour?: number;
+  bestMonthAvg?: number;
+  bestDayAvg?: number;
+  bestHourAvg?: number;
+  // Milestones
+  milestones?: {
+    postNumber: number;
+    text: string;
+    likes: number;
+    reposts: number;
+    replies: number;
+    createdAt: string;
+  }[];
 }
 
 interface StoryCardProps {
@@ -97,9 +139,25 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
     title: "Your year on Bluesky",
     tagline: "Let's see what you've been up to.",
   },
+  firstPost: {
+    title: "It all began with",
+    tagline: "Your first post of the year.",
+  },
   stats: {
     title: "You showed up",
     tagline: "Every post, a small signal in the sky.",
+  },
+  mostLiked: {
+    title: "This one got the hearts",
+    tagline: "Your most liked post of the year.",
+  },
+  mostReposted: {
+    title: "This one got shared",
+    tagline: "Your most reposted post of the year.",
+  },
+  mostReplied: {
+    title: "This one started a conversation",
+    tagline: "Your most replied-to post of the year.",
   },
   topPost: {
     title: "This one hit different",
@@ -128,6 +186,26 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   topics: {
     title: "What you talked about",
     tagline: "The words that defined your year.",
+  },
+  emojis: {
+    title: "Your emoji personality",
+    tagline: "You really love these.",
+  },
+  media: {
+    title: "You're a",
+    tagline: "Your content style, revealed.",
+  },
+  links: {
+    title: "You're a",
+    tagline: "Your link sharing style, revealed.",
+  },
+  engagementTimeline: {
+    title: "Your golden hour",
+    tagline: "When you shine brightest.",
+  },
+  milestones: {
+    title: "Milestone moments",
+    tagline: "You hit these numbers.",
   },
   summary: {
     title: "Your year in numbers",
@@ -170,6 +248,43 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
           </div>
         );
 
+      case "firstPost":
+        return (
+          <div className="space-y-6 w-full">
+            {data.firstPostText ? (
+              <>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {data.firstPostText}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-6 text-sm">
+                  <div className="text-center">
+                    <span className="text-2xl font-bold text-foreground block">
+                      {formatNumber(data.firstPostLikes || 0)}
+                    </span>
+                    <span className="text-muted-foreground">likes</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-2xl font-bold text-foreground block">
+                      {formatNumber(data.firstPostReposts || 0)}
+                    </span>
+                    <span className="text-muted-foreground">reposts</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-2xl font-bold text-foreground block">
+                      {formatNumber(data.firstPostReplies || 0)}
+                    </span>
+                    <span className="text-muted-foreground">replies</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">No posts found for this year</p>
+            )}
+          </div>
+        );
+
       case "stats":
         return (
           <div className="space-y-8">
@@ -193,6 +308,75 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
                 <p className="text-sm text-muted-foreground">reposts</p>
               </div>
             </div>
+          </div>
+        );
+
+      case "mostLiked":
+        return (
+          <div className="space-y-6 w-full">
+            {data.mostLikedText ? (
+              <>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {data.mostLikedText}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <span className="text-4xl font-bold text-primary block">
+                    {formatNumber(data.mostLikedLikes || 0)}
+                  </span>
+                  <span className="text-muted-foreground">❤️ likes</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">No posts found</p>
+            )}
+          </div>
+        );
+
+      case "mostReposted":
+        return (
+          <div className="space-y-6 w-full">
+            {data.mostRepostedText ? (
+              <>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {data.mostRepostedText}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <span className="text-4xl font-bold text-primary block">
+                    {formatNumber(data.mostRepostedReposts || 0)}
+                  </span>
+                  <span className="text-muted-foreground">🔄 reposts</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">No posts found</p>
+            )}
+          </div>
+        );
+
+      case "mostReplied":
+        return (
+          <div className="space-y-6 w-full">
+            {data.mostRepliedText ? (
+              <>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {data.mostRepliedText}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <span className="text-4xl font-bold text-primary block">
+                    {formatNumber(data.mostRepliedReplies || 0)}
+                  </span>
+                  <span className="text-muted-foreground">💬 replies</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">No posts found</p>
+            )}
           </div>
         );
 
@@ -373,6 +557,188 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
               <p className="text-muted-foreground text-center">
                 Not enough data for topics
               </p>
+            )}
+          </div>
+        );
+
+      case "emojis":
+        return (
+          <div className="space-y-6 w-full">
+            {data.topEmojis && data.topEmojis.length > 0 ? (
+              <>
+                <div className="flex flex-wrap justify-center gap-4">
+                  {data.topEmojis.slice(0, 10).map((item, index) => (
+                    <div key={index} className="flex flex-col items-center gap-2">
+                      <span className="text-5xl">{item.emoji}</span>
+                      <span className="text-xs text-muted-foreground">{formatNumber(item.count)}</span>
+                    </div>
+                  ))}
+                </div>
+                {data.totalEmojis && data.totalEmojis > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {formatNumber(data.totalEmojis)} emojis total
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">No emojis found</p>
+            )}
+          </div>
+        );
+
+      case "media":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <span className="text-5xl font-bold text-primary">
+                {data.mediaType || "Text-only"}
+              </span>
+            </div>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto">
+              {data.mediaDescription || "Words are your medium."}
+            </p>
+            {data.mediaPosts !== undefined && (
+              <div className="pt-4 border-t border-border/30">
+                <p className="text-sm text-muted-foreground">
+                  {formatNumber(data.mediaPosts)} posts with media
+                  {data.mediaRatio !== undefined && (
+                    <span className="block mt-1">
+                      ({Math.round(data.mediaRatio * 100)}% of your posts)
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case "links":
+        const hasLinks = data.topDomains && data.topDomains.length > 0;
+        return (
+          <div className="space-y-6 w-full">
+            {hasLinks ? (
+              <>
+                <div className="text-center">
+                  <span className="text-5xl font-bold text-primary">
+                    {data.linkType || "Link Sharer"}
+                  </span>
+                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto text-center">
+                  {data.linkDescription || "You share links that matter."}
+                </p>
+                <div className="pt-4 border-t border-border/30">
+                  <p className="text-sm text-muted-foreground mb-3 text-center">Your most shared domains</p>
+                  <div className="space-y-2">
+                    {data.topDomains.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between gap-4 p-2 bg-muted/30 rounded">
+                        <span className="text-sm font-medium text-foreground truncate flex-1">
+                          {item.domain}
+                        </span>
+                        <span className="text-sm text-muted-foreground flex-shrink-0">
+                          {formatNumber(item.count)} {item.count === 1 ? 'link' : 'links'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {data.totalLinks !== undefined && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {formatNumber(data.totalLinks)} links total
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <span className="text-5xl font-bold text-primary">
+                    Text-only
+                  </span>
+                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto text-center">
+                  You keep it simple. No links, no distractions. Pure thoughts.
+                </p>
+                <p className="text-sm text-muted-foreground text-center pt-4">
+                  No external links shared this year
+                </p>
+              </>
+            )}
+          </div>
+        );
+
+      case "engagementTimeline":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">Best performing month</p>
+              <span className="text-4xl font-bold text-foreground">
+                {data.bestMonth || "Unknown"}
+              </span>
+              {data.bestMonthAvg !== undefined && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Avg. {formatNumber(data.bestMonthAvg)} engagement per post
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-muted-foreground text-sm mb-1">Best day</p>
+                <span className="text-2xl font-semibold text-foreground">
+                  {data.bestDay || "Unknown"}
+                </span>
+                {data.bestDayAvg !== undefined && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Avg. {formatNumber(data.bestDayAvg)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm mb-1">Peak hour</p>
+                <span className="text-2xl font-semibold text-foreground">
+                  {data.bestHour !== undefined ? formatHour(data.bestHour) : "Unknown"}
+                </span>
+                {data.bestHourAvg !== undefined && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Avg. {formatNumber(data.bestHourAvg)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "milestones":
+        return (
+          <div className="space-y-4 w-full">
+            {data.milestones && data.milestones.length > 0 ? (
+              <div className="space-y-4">
+                {data.milestones.slice(0, 3).map((milestone, index) => (
+                  <div key={index} className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <span className="text-2xl font-bold text-primary">
+                        #{formatNumber(milestone.postNumber)}
+                      </span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="text-muted-foreground">
+                          ❤️ {formatNumber(milestone.likes)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          🔄 {formatNumber(milestone.reposts)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          💬 {formatNumber(milestone.replies)}
+                        </span>
+                      </div>
+                    </div>
+                    {milestone.text && (
+                      <p className="text-sm text-foreground leading-relaxed line-clamp-2">
+                        {milestone.text}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center">No milestones found</p>
             )}
           </div>
         );
