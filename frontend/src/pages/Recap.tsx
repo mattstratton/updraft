@@ -67,7 +67,7 @@ interface RecapData {
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "summary", "finale"];
+const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "summary", "finale", "credits"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();

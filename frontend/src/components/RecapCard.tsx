@@ -29,7 +29,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "summary" | "finale";
+export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "summary" | "finale" | "credits";
 
 interface TopFan {
   handle: string;
@@ -136,6 +136,10 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   finale: {
     title: "That was your year",
     tagline: "Some posts catch an updraft. Some become it.",
+  },
+  credits: {
+    title: "Want more?",
+    tagline: "Check out another take on your Bluesky year.",
   },
 };
 
@@ -447,6 +451,37 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
             <p className="text-xl text-muted-foreground">total interactions</p>
             <p className="text-base text-muted-foreground/80">
               Avg. {formatNumber(data.avgEngagement || 0)} per post
+            </p>
+          </div>
+        );
+
+      case "credits":
+        return (
+          <div className="space-y-6 text-center">
+            <p className="text-lg text-muted-foreground">
+              Liked this recap?
+            </p>
+            <p className="text-base text-foreground">
+              Check out another take on your Bluesky year
+            </p>
+            <a
+              href={`https://www.madebyolof.com/bluesky-wrapped/${data.handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Try Bluesky Wrapped by Olof
+            </a>
+            <p className="text-xs text-muted-foreground/60 mt-4">
+              Made by{" "}
+              <a
+                href="https://bsky.app/profile/matty.wtf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground"
+              >
+                @matty.wtf
+              </a>
             </p>
           </div>
         );
