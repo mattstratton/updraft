@@ -407,27 +407,29 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
             {/* Top highlights */}
             <div className="space-y-3 pt-2 border-t border-border/30 pb-1">
               {data.topPostLikes && data.topPostLikes > 0 && (
-                <div className="flex items-center justify-between text-sm leading-normal">
-                  <span className="text-muted-foreground">Top post</span>
-                  <span className="font-medium">{formatNumber(data.topPostLikes)} ❤️</span>
+                <div className="flex items-center justify-between text-sm min-w-0" style={{ lineHeight: '1.5', overflowY: 'visible' }}>
+                  <span className="text-muted-foreground flex-shrink-0">Top post</span>
+                  <span className="font-medium flex-shrink-0">{formatNumber(data.topPostLikes)} ❤️</span>
                 </div>
               )}
               {data.posterType && (
-                <div className="flex items-center justify-between text-sm leading-normal">
-                  <span className="text-muted-foreground">You're a</span>
-                  <span className="font-medium text-primary">{data.posterType}</span>
+                <div className="flex items-center justify-between text-sm min-w-0" style={{ lineHeight: '1.5', overflowY: 'visible' }}>
+                  <span className="text-muted-foreground flex-shrink-0">You're a</span>
+                  <span className="font-medium text-primary truncate max-w-[60%] min-w-0 text-right" title={data.posterType} style={{ overflowX: 'hidden', overflowY: 'visible' }}>
+                    {data.posterType}
+                  </span>
                 </div>
               )}
               {data.postingAge && (
-                <div className="flex items-center justify-between text-sm leading-normal">
-                  <span className="text-muted-foreground">Posting age</span>
-                  <span className="font-medium">{data.postingAgeYear || data.postingAge}</span>
+                <div className="flex items-center justify-between text-sm min-w-0" style={{ lineHeight: '1.5', overflowY: 'visible' }}>
+                  <span className="text-muted-foreground flex-shrink-0">Posting age</span>
+                  <span className="font-medium flex-shrink-0">{data.postingAgeYear || data.postingAge}</span>
                 </div>
               )}
               {data.topFans && data.topFans.length > 0 && (
-                <div className="flex items-center justify-between text-sm min-w-0 leading-normal">
+                <div className="flex items-center justify-between text-sm min-w-0" style={{ lineHeight: '1.5', overflowY: 'visible' }}>
                   <span className="text-muted-foreground flex-shrink-0">Biggest fan</span>
-                  <span className="font-medium truncate max-w-[60%] min-w-0 text-right" title={data.topFans[0].displayName}>
+                  <span className="font-medium truncate max-w-[60%] min-w-0 text-right" title={data.topFans[0].displayName} style={{ overflowX: 'hidden', overflowY: 'visible' }}>
                     {data.topFans[0].displayName}
                   </span>
                 </div>

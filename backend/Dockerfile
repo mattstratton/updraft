@@ -33,9 +33,16 @@ RUN apk add --no-cache openssl openssl-dev
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy Prisma schema and generated client from builder
+# Copy package files for prisma CLI
+COPY package*.json ./
+
+# Install Prisma CLI (needed for migrations)
+RUN npm ci --omit=dev
+
+# Copy Prisma schema, migrations, and generated client from builder
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
@@ -43,6 +50,6 @@ COPY --from=builder /app/dist ./dist
 # Expose port
 EXPOSE 3001
 
-# Start the server
-CMD ["node", "dist/index.js"]
+# Start script that runs migrations then starts the server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
 

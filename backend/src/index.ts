@@ -72,6 +72,9 @@ async function startServer() {
     // Test database connection
     await prisma.$connect();
     console.log('✅ Database connected');
+    
+    // Note: Migrations are run via `prisma migrate deploy` in the Docker CMD
+    // This ensures migrations run before the server starts
   } catch (error) {
     console.warn('⚠️  Database connection failed, continuing without cache:', error);
     // Continue without database - caching will gracefully degrade

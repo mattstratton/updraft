@@ -5,7 +5,7 @@ CREATE TABLE "recaps" (
     "year" INTEGER NOT NULL,
     "data" JSONB NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expiresAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "recaps_pkey" PRIMARY KEY ("id")

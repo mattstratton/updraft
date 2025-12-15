@@ -395,23 +395,31 @@ export default function Recap() {
               itemEl.style.minWidth = '0';
               itemEl.style.width = '100%';
               itemEl.style.boxSizing = 'border-box';
-              itemEl.style.lineHeight = 'normal';
+              itemEl.style.lineHeight = '1.5';
               itemEl.style.overflowY = 'visible'; // Allow vertical overflow for descenders
               
               // Fix all spans in the summary item
               const spans = itemEl.querySelectorAll('span');
               spans.forEach((spanEl) => {
                 const spanHtmlEl = spanEl as HTMLElement;
-                spanHtmlEl.style.lineHeight = 'normal';
+                spanHtmlEl.style.lineHeight = '1.5';
                 spanHtmlEl.style.overflowY = 'visible';
                 
-                if (spanEl.classList.contains('truncate') || spanEl.classList.contains('font-medium')) {
+                // Check if this span should truncate (has truncate class or is the right-side value)
+                const isRightSide = spanEl.classList.contains('text-right') || 
+                                   (spanEl.classList.contains('font-medium') && !spanEl.classList.contains('text-muted-foreground'));
+                
+                if (spanEl.classList.contains('truncate') || isRightSide) {
                   spanHtmlEl.style.textOverflow = 'ellipsis';
                   spanHtmlEl.style.overflowX = 'hidden';
+                  spanHtmlEl.style.overflowY = 'visible';
                   spanHtmlEl.style.whiteSpace = 'nowrap';
                   spanHtmlEl.style.maxWidth = '100%';
                   spanHtmlEl.style.display = 'inline-block';
                   spanHtmlEl.style.boxSizing = 'border-box';
+                } else {
+                  // Left side labels - no truncation needed
+                  spanHtmlEl.style.flexShrink = '0';
                 }
               });
             });
