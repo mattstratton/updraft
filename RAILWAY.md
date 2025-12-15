@@ -49,8 +49,47 @@ Railway services in the same project can communicate via private networking usin
 ## Custom Domains
 
 1. In each service, go to **Settings** → **Domains**
-2. Add your custom domain
-3. Railway will provide DNS records to configure
+2. Add your custom domain (e.g., `updraft-app.com` and `www.updraft-app.com`)
+3. Railway will provide DNS records to configure:
+   - Usually a CNAME record pointing to Railway's domain
+   - Or A records pointing to Railway's IP addresses
+4. Configure DNS at your domain registrar:
+   - Add the CNAME or A records Railway provides
+   - Wait for DNS propagation (can take a few minutes to hours)
+5. Railway will automatically provision SSL certificates:
+   - This usually happens within 5-15 minutes after DNS is correct
+   - Check the domain status in Railway dashboard
+   - Status should show "Active" when SSL is ready
+
+### SSL Troubleshooting
+
+If you're getting SSL errors:
+
+1. **Check DNS Configuration**:
+   - Verify DNS records are correct at your domain registrar
+   - Use `dig updraft-app.com` or online DNS checker to verify propagation
+   - Ensure CNAME/A records match Railway's instructions exactly
+
+2. **Check Railway Domain Status**:
+   - Go to Settings → Domains in your service
+   - Verify domain shows "Active" status (not "Provisioning" or error)
+   - If stuck on "Provisioning", wait 15-30 minutes for SSL certificate
+
+3. **Verify Domain Points to Correct Service**:
+   - Make sure `updraft-app.com` points to your **frontend** service
+   - Backend should use a different subdomain or Railway URL
+
+4. **Common Issues**:
+   - **"SSL certificate not ready"**: Wait 5-15 minutes after DNS is correct
+   - **"Domain not found"**: Check DNS records are correct and propagated
+   - **"Certificate error"**: Railway may need to regenerate - try removing and re-adding domain
+   - **"Mixed content"**: Ensure all resources use HTTPS (check `index.html` for HTTP links)
+
+5. **Force SSL Certificate Regeneration**:
+   - Remove the domain from Railway
+   - Wait 5 minutes
+   - Re-add the domain
+   - Railway will attempt to provision SSL again
 
 ## Environment Variables
 
