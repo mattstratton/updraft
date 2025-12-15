@@ -815,6 +815,66 @@ function analyzeLinks(posts: any[]): { topDomains: { domain: string; count: numb
   return { topDomains, totalLinks, type, description };
 }
 
+function analyzeVisualizations(posts: any[], targetYear: number): { 
+  monthlyPosts: { month: string; count: number }[];
+  monthlyEngagement: { month: string; engagement: number }[];
+  dailyActivity: { day: string; count: number }[];
+} {
+  // Group posts by month
+  const monthlyPosts: Record<string, number> = {};
+  const monthlyEngagement: Record<string, number> = {};
+  const dailyActivity: Record<string, number> = {};
+
+  // Month names in order
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  // Initialize all months to 0
+  monthNames.forEach(month => {
+    monthlyPosts[month] = 0;
+    monthlyEngagement[month] = 0;
+  });
+
+  // Day names
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  dayNames.forEach(day => {
+    dailyActivity[day] = 0;
+  });
+
+  posts.forEach((item: any) => {
+    const date = new Date(item.post.record?.createdAt);
+    const month = date.toLocaleString('default', { month: 'long' });
+    const day = date.toLocaleString('default', { weekday: 'long' });
+    
+    const engagement = (item.post.likeCount || 0) + (item.post.repostCount || 0) + (item.post.replyCount || 0);
+    
+    monthlyPosts[month] = (monthlyPosts[month] || 0) + 1;
+    monthlyEngagement[month] = (monthlyEngagement[month] || 0) + engagement;
+    dailyActivity[day] = (dailyActivity[day] || 0) + 1;
+  });
+
+  // Convert to arrays, sorted by month order
+  const monthlyPostsArray = monthNames
+    .filter(month => monthlyPosts[month] > 0)
+    .map(month => ({ month, count: monthlyPosts[month] }));
+
+  const monthlyEngagementArray = monthNames
+    .filter(month => monthlyEngagement[month] > 0)
+    .map(month => ({ month, engagement: monthlyEngagement[month] }));
+
+  // Sort days by week order (Sunday first)
+  const dailyActivityArray = dayNames.map(day => ({ 
+    day: day.substring(0, 3), // Abbreviate to 3 letters
+    count: dailyActivity[day] || 0 
+  }));
+
+  return {
+    monthlyPosts: monthlyPostsArray,
+    monthlyEngagement: monthlyEngagementArray,
+    dailyActivity: dailyActivityArray,
+  };
+}
+
 function analyzeMedia(posts: any[], totalPosts: number): { mediaPosts: number; mediaRatio: number; type: string; description: string } {
   let mediaPosts = 0;
   let imagePosts = 0;
@@ -1106,6 +1166,10 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
   console.log("Analyzing link/domain sharing...");
   const linkAnalysis = analyzeLinks(ownPosts);
 
+  // Analyze posting frequency and engagement trends for visualizations
+  console.log("Analyzing posting frequency and engagement trends...");
+  const visualizations = analyzeVisualizations(ownPosts, targetYear);
+
   // Check if data was potentially truncated
   const isTruncated = fetchedIterations !== undefined && maxIterations !== undefined && fetchedIterations >= maxIterations;
 
@@ -1177,6 +1241,7 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
     engagementTimeline: engagementTimeline,
     milestones: milestones,
     links: linkAnalysis,
+    visualizations: visualizations,
     year: targetYear,
     truncated: isTruncated,
     _debug: {

@@ -127,11 +127,16 @@ interface RecapData {
     type: string;
     description: string;
   };
+  visualizations?: {
+    monthlyPosts: { month: string; count: number }[];
+    monthlyEngagement: { month: string; engagement: number }[];
+    dailyActivity: { day: string; count: number }[];
+  };
   year: number;
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "firstPost", "stats", "mostLiked", "mostReposted", "mostReplied", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "emojis", "media", "links", "engagementTimeline", "milestones", "summary", "finale", "credits"];
+const cardVariants: CardVariant[] = ["intro", "firstPost", "stats", "mostLiked", "mostReposted", "mostReplied", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "emojis", "media", "links", "visualizations", "engagementTimeline", "milestones", "summary", "finale", "credits"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -686,6 +691,9 @@ export default function Recap() {
       linkDescription: recap.links?.description || "You keep it simple. No links, no distractions.",
       topDomains: recap.links?.topDomains || [],
       totalLinks: recap.links?.totalLinks || 0,
+      monthlyPosts: recap.visualizations?.monthlyPosts,
+      monthlyEngagement: recap.visualizations?.monthlyEngagement,
+      dailyActivity: recap.visualizations?.dailyActivity,
       bestMonth: recap.engagementTimeline?.bestMonth,
       bestDay: recap.engagementTimeline?.bestDay,
       bestHour: recap.engagementTimeline?.bestHour,

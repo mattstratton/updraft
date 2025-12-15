@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ReactNode, forwardRef } from "react";
 import { UpdraftLogo } from "@/components/UpdraftLogo";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 // Simple wrapper card for general use
 interface SimpleCardProps {
@@ -29,7 +30,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "firstPost" | "stats" | "mostLiked" | "mostReposted" | "mostReplied" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "emojis" | "media" | "links" | "engagementTimeline" | "milestones" | "summary" | "finale" | "credits";
+export type CardVariant = "intro" | "firstPost" | "stats" | "mostLiked" | "mostReposted" | "mostReplied" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "emojis" | "media" | "links" | "visualizations" | "engagementTimeline" | "milestones" | "summary" | "finale" | "credits";
 
 interface TopFan {
   handle: string;
@@ -100,6 +101,10 @@ interface StoryCardData {
   linkDescription?: string;
   topDomains?: { domain: string; count: number }[];
   totalLinks?: number;
+  // Visualizations
+  monthlyPosts?: { month: string; count: number }[];
+  monthlyEngagement?: { month: string; engagement: number }[];
+  dailyActivity?: { day: string; count: number }[];
   // Engagement timeline
   bestMonth?: string;
   bestDay?: string;
@@ -132,6 +137,52 @@ function formatHour(hour: number): string {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const h = hour % 12 || 12;
   return `${h} ${ampm}`;
+}
+
+// Simple bar chart component for visualizations
+function SimpleBarChart({ 
+  data, 
+  dataKey, 
+  nameKey, 
+  color 
+}: { 
+  data: { [key: string]: string | number }[]; 
+  dataKey: string; 
+  nameKey: string; 
+  color: string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+        <XAxis 
+          dataKey={nameKey} 
+          tick={{ fontSize: 10, fill: 'currentColor' }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis 
+          tick={{ fontSize: 10, fill: 'currentColor' }}
+          axisLine={false}
+          tickLine={false}
+          width={30}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '6px',
+            fontSize: '12px'
+          }}
+          labelStyle={{ color: 'hsl(var(--foreground))' }}
+        />
+        <Bar 
+          dataKey={dataKey} 
+          fill={color}
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
 }
 
 const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
@@ -198,6 +249,10 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   links: {
     title: "You're a",
     tagline: "Your link sharing style, revealed.",
+  },
+  visualizations: {
+    title: "Your year visualized",
+    tagline: "See your activity patterns.",
   },
   engagementTimeline: {
     title: "Your golden hour",
@@ -661,6 +716,57 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
                   No external links shared this year
                 </p>
               </>
+            )}
+          </div>
+        );
+
+      case "visualizations":
+        return (
+          <div className="space-y-6 w-full">
+            {data.monthlyPosts && data.monthlyPosts.length > 0 ? (
+              <>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3 text-center">Posts per month</p>
+                    <div className="h-40 w-full">
+                      <SimpleBarChart
+                        data={data.monthlyPosts}
+                        dataKey="count"
+                        nameKey="month"
+                        color="#4a90e2"
+                      />
+                    </div>
+                  </div>
+                  {data.monthlyEngagement && data.monthlyEngagement.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3 text-center">Engagement per month</p>
+                      <div className="h-40 w-full">
+                        <SimpleBarChart
+                          data={data.monthlyEngagement}
+                          dataKey="engagement"
+                          nameKey="month"
+                          color="#10b981"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {data.dailyActivity && data.dailyActivity.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3 text-center">Activity by day of week</p>
+                      <div className="h-40 w-full">
+                        <SimpleBarChart
+                          data={data.dailyActivity}
+                          dataKey="count"
+                          nameKey="day"
+                          color="#8b5cf6"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center">Not enough data for visualizations</p>
             )}
           </div>
         );
