@@ -342,6 +342,7 @@ export default function Recap() {
               const rowEl = row as HTMLElement;
               rowEl.style.minWidth = '0';
               rowEl.style.width = '100%';
+              rowEl.style.maxWidth = '100%';
               rowEl.style.boxSizing = 'border-box';
               
               const textContainer = rowEl.querySelector('.flex-1');
@@ -349,21 +350,41 @@ export default function Recap() {
                 const textEl = textContainer as HTMLElement;
                 textEl.style.minWidth = '0';
                 textEl.style.maxWidth = '100%';
-                textEl.style.overflow = 'hidden';
-                textEl.style.width = '100%';
+                textEl.style.overflow = 'visible'; // Changed from 'hidden' to prevent clipping
                 textEl.style.boxSizing = 'border-box';
+                textEl.style.flex = '1 1 0%';
+                textEl.style.paddingTop = '0';
+                textEl.style.paddingBottom = '0';
                 
-                const nameEl = textContainer.querySelector('p');
-                if (nameEl) {
-                  const nameHtmlEl = nameEl as HTMLElement;
-                  nameHtmlEl.style.textOverflow = 'ellipsis';
-                  nameHtmlEl.style.overflow = 'hidden';
-                  nameHtmlEl.style.whiteSpace = 'nowrap';
-                  nameHtmlEl.style.maxWidth = '100%';
-                  nameHtmlEl.style.width = '100%';
-                  nameHtmlEl.style.display = 'block';
-                  nameHtmlEl.style.boxSizing = 'border-box';
-                }
+                // Fix all paragraph elements in the text container
+                const paragraphs = textContainer.querySelectorAll('p');
+                paragraphs.forEach((pEl) => {
+                  const pHtmlEl = pEl as HTMLElement;
+                  // Ensure truncation styles are applied but don't clip vertically
+                  if (pEl.classList.contains('truncate') || pHtmlEl.textContent) {
+                    pHtmlEl.style.textOverflow = 'ellipsis';
+                    pHtmlEl.style.overflowX = 'hidden'; // Only hide horizontal overflow
+                    pHtmlEl.style.overflowY = 'visible'; // Allow vertical overflow for descenders
+                    pHtmlEl.style.whiteSpace = 'nowrap';
+                    pHtmlEl.style.maxWidth = '100%';
+                    pHtmlEl.style.display = 'block';
+                    pHtmlEl.style.boxSizing = 'border-box';
+                    pHtmlEl.style.lineHeight = '1.5'; // Ensure proper line height with more space
+                    // Add more padding for the first paragraph (name), less for second (stats)
+                    if (pEl.textContent && pEl.textContent.includes('❤️')) {
+                      // This is the stats line
+                      pHtmlEl.style.paddingTop = '4px';
+                      pHtmlEl.style.paddingBottom = '2px';
+                    } else {
+                      // This is the name line
+                      pHtmlEl.style.paddingTop = '2px';
+                      pHtmlEl.style.paddingBottom = '4px';
+                    }
+                    // Make sure text is visible
+                    pHtmlEl.style.visibility = 'visible';
+                    pHtmlEl.style.opacity = '1';
+                  }
+                });
               }
             });
             
@@ -374,17 +395,25 @@ export default function Recap() {
               itemEl.style.minWidth = '0';
               itemEl.style.width = '100%';
               itemEl.style.boxSizing = 'border-box';
+              itemEl.style.lineHeight = 'normal';
+              itemEl.style.overflowY = 'visible'; // Allow vertical overflow for descenders
               
-              const textSpan = itemEl.querySelector('span.font-medium.truncate, span.font-medium[class*="truncate"]');
-              if (textSpan) {
-                const textSpanEl = textSpan as HTMLElement;
-                textSpanEl.style.textOverflow = 'ellipsis';
-                textSpanEl.style.overflow = 'hidden';
-                textSpanEl.style.whiteSpace = 'nowrap';
-                textSpanEl.style.maxWidth = '100%';
-                textSpanEl.style.display = 'inline-block';
-                textSpanEl.style.boxSizing = 'border-box';
-              }
+              // Fix all spans in the summary item
+              const spans = itemEl.querySelectorAll('span');
+              spans.forEach((spanEl) => {
+                const spanHtmlEl = spanEl as HTMLElement;
+                spanHtmlEl.style.lineHeight = 'normal';
+                spanHtmlEl.style.overflowY = 'visible';
+                
+                if (spanEl.classList.contains('truncate') || spanEl.classList.contains('font-medium')) {
+                  spanHtmlEl.style.textOverflow = 'ellipsis';
+                  spanHtmlEl.style.overflowX = 'hidden';
+                  spanHtmlEl.style.whiteSpace = 'nowrap';
+                  spanHtmlEl.style.maxWidth = '100%';
+                  spanHtmlEl.style.display = 'inline-block';
+                  spanHtmlEl.style.boxSizing = 'border-box';
+                }
+              });
             });
             
             // Fix the parent container

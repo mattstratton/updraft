@@ -290,7 +290,7 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
           <div className="space-y-4 w-full px-2">
             {data.topFans && data.topFans.length > 0 ? (
               data.topFans.slice(0, 5).map((fan, index) => (
-                <div key={fan.handle} className="flex items-center gap-3 min-w-0">
+                <div key={fan.handle} className="flex items-center gap-3 min-w-0 w-full">
                   <span className="text-2xl font-bold text-primary/60 flex-shrink-0 w-6">
                     {index + 1}
                   </span>
@@ -307,11 +307,15 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
                       </span>
                     </div>
                   )}
-                  <div className="flex-1 min-w-0 text-left overflow-hidden">
-                    <p className="font-medium text-sm truncate" title={fan.displayName}>
+                  <div className="flex-1 min-w-0 text-left overflow-visible max-w-full">
+                    <p 
+                      className="font-medium text-sm truncate block overflow-hidden text-ellipsis whitespace-nowrap max-w-full" 
+                      title={fan.displayName}
+                      style={{ maxWidth: '100%', lineHeight: '1.5', paddingBottom: '4px', paddingTop: '2px' }}
+                    >
                       {fan.displayName}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate block overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ lineHeight: '1.5', paddingTop: '4px', paddingBottom: '2px' }}>
                       {formatNumber(fan.likes)} ❤️ {formatNumber(fan.reposts)} 🔁
                     </p>
                   </div>
@@ -401,27 +405,27 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
             </div>
 
             {/* Top highlights */}
-            <div className="space-y-3 pt-2 border-t border-border/30">
+            <div className="space-y-3 pt-2 border-t border-border/30 pb-1">
               {data.topPostLikes && data.topPostLikes > 0 && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm leading-normal">
                   <span className="text-muted-foreground">Top post</span>
                   <span className="font-medium">{formatNumber(data.topPostLikes)} ❤️</span>
                 </div>
               )}
               {data.posterType && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm leading-normal">
                   <span className="text-muted-foreground">You're a</span>
                   <span className="font-medium text-primary">{data.posterType}</span>
                 </div>
               )}
               {data.postingAge && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm leading-normal">
                   <span className="text-muted-foreground">Posting age</span>
                   <span className="font-medium">{data.postingAgeYear || data.postingAge}</span>
                 </div>
               )}
               {data.topFans && data.topFans.length > 0 && (
-                <div className="flex items-center justify-between text-sm min-w-0">
+                <div className="flex items-center justify-between text-sm min-w-0 leading-normal">
                   <span className="text-muted-foreground flex-shrink-0">Biggest fan</span>
                   <span className="font-medium truncate max-w-[60%] min-w-0 text-right" title={data.topFans[0].displayName}>
                     {data.topFans[0].displayName}
