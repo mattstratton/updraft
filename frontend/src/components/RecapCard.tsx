@@ -29,7 +29,7 @@ export const RecapCard = forwardRef<HTMLDivElement, SimpleCardProps>(
 RecapCard.displayName = "RecapCard";
 
 // Shareable story-style card variants
-export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "topFans" | "topics" | "finale";
+export type CardVariant = "intro" | "stats" | "topPost" | "rhythm" | "streak" | "posterType" | "postingAge" | "topFans" | "topics" | "finale";
 
 interface TopFan {
   handle: string;
@@ -67,6 +67,13 @@ interface StoryCardData {
   // Topics
   topWords?: { word: string; count: number }[];
   topBigrams?: { phrase: string; count: number }[];
+  // Poster type
+  posterType?: string;
+  posterTypeDescription?: string;
+  // Posting age
+  postingAge?: string;
+  postingAgeYear?: string;
+  postingAgeDescription?: string;
 }
 
 interface StoryCardProps {
@@ -105,6 +112,14 @@ const cardContent: Record<CardVariant, { title: string; tagline: string }> = {
   streak: {
     title: "Consistency is everything",
     tagline: "You kept showing up.",
+  },
+  posterType: {
+    title: "You're a",
+    tagline: "Your posting style, revealed.",
+  },
+  postingAge: {
+    title: "Your posting age",
+    tagline: "When did you learn to post?",
   },
   topFans: {
     title: "Your biggest fans",
@@ -231,6 +246,37 @@ export function StoryCard({ data, className }: StoryCardProps) {
               </span>
               <p className="text-sm text-muted-foreground">days active this year</p>
             </div>
+          </div>
+        );
+
+      case "posterType":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <span className="text-5xl font-bold text-primary">
+                {data.posterType || "Balanced"}
+              </span>
+            </div>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto">
+              {data.posterTypeDescription || "Your posting style is balanced across all metrics."}
+            </p>
+          </div>
+        );
+
+      case "postingAge":
+        return (
+          <div className="space-y-6 text-center">
+            <div>
+              <span className="text-6xl font-bold text-foreground">
+                {data.postingAgeYear || "2024"}
+              </span>
+              <p className="text-2xl text-primary mt-2 font-semibold">
+                {data.postingAge || "2024s Bluesky"}
+              </p>
+            </div>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto">
+              {data.postingAgeDescription || "Your posting style matches modern Bluesky."}
+            </p>
           </div>
         );
 

@@ -4,23 +4,23 @@ import { FeatureCard } from "@/components/FeatureCard";
 const features = [
   {
     icon: TrendingUp,
-    title: "Lift",
-    description: "See how your posts and followers grew over time.",
+    title: "Your Numbers",
+    description: "Total posts, likes, reposts, and engagement across the year.",
   },
   {
     icon: Wind,
     title: "Tailwinds",
-    description: "Discover which conversations and connections helped your posts travel.",
+    description: "Your biggest fans—the people who engaged with your posts most.",
   },
   {
     icon: Cloud,
-    title: "High Points",
-    description: "Your most engaged-with posts, moments, and themes.",
+    title: "Top Moments",
+    description: "Your most engaging post and the topics that defined your year.",
   },
   {
     icon: Compass,
-    title: "Patterns",
-    description: "When you posted, how often, and what stuck.",
+    title: "Your Rhythm",
+    description: "When you posted, your longest streak, and your posting patterns.",
   },
 ];
 

@@ -53,11 +53,20 @@ interface RecapData {
     topWords: { word: string; count: number }[];
     topBigrams: { phrase: string; count: number }[];
   };
+  posterType: {
+    type: string;
+    description: string;
+  };
+  postingAge: {
+    era: string;
+    year: string;
+    description: string;
+  };
   year: number;
   truncated?: boolean;
 }
 
-const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "topFans", "topics", "finale"];
+const cardVariants: CardVariant[] = ["intro", "stats", "topPost", "rhythm", "streak", "posterType", "postingAge", "topFans", "topics", "finale"];
 
 export default function Recap() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -224,6 +233,11 @@ export default function Recap() {
       topFans: recap.topFans,
       topWords: recap.topics?.topWords,
       topBigrams: recap.topics?.topBigrams,
+      posterType: recap.posterType?.type,
+      posterTypeDescription: recap.posterType?.description,
+      postingAge: recap.postingAge?.era,
+      postingAgeYear: recap.postingAge?.year,
+      postingAgeDescription: recap.postingAge?.description,
     };
   };
 

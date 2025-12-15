@@ -429,6 +429,225 @@ function analyzeTopics(posts: any[]) {
   return { topWords, topBigrams };
 }
 
+function analyzePosterType(posts: any[], totalPosts: number, totalReplies: number, totalReposts: number, avgEngagement: number, longestStreak: number, hourCounts: Record<number, number>) {
+  if (totalPosts === 0) {
+    return {
+      type: "Balanced",
+      description: "Your posting style is balanced across all metrics.",
+    };
+  }
+
+  // Count how many posts are replies vs reposts vs original
+  const replyPosts = posts.filter((item: any) => item.post.record?.reply).length;
+  const repostPosts = posts.filter((item: any) => item.post.record?.embed?.$type === 'app.bsky.embed.record').length;
+  
+  // Calculate ratios
+  const replyRatio = replyPosts / totalPosts;
+  const repostRatio = repostPosts / totalPosts;
+  const originalPostRatio = 1 - replyRatio - repostRatio;
+
+  // Calculate time patterns
+  let nightOwlPosts = 0;
+  let earlyBirdPosts = 0;
+  let totalTimePosts = 0;
+
+  Object.entries(hourCounts).forEach(([hour, count]) => {
+    const h = parseInt(hour);
+    totalTimePosts += count;
+    // Night owl: 10 PM - 2 AM (22, 23, 0, 1)
+    if (h >= 22 || h < 2) {
+      nightOwlPosts += count;
+    }
+    // Early bird: 5 AM - 9 AM (5, 6, 7, 8)
+    if (h >= 5 && h < 9) {
+      earlyBirdPosts += count;
+    }
+  });
+
+  const nightOwlRatio = totalTimePosts > 0 ? nightOwlPosts / totalTimePosts : 0;
+  const earlyBirdRatio = totalTimePosts > 0 ? earlyBirdPosts / totalTimePosts : 0;
+
+  // Determine poster type (check in priority order)
+  
+  // Streak Master
+  if (longestStreak > 30) {
+    return {
+      type: "Streak Master",
+      description: `${longestStreak} days in a row? That's not dedication, that's a cry for help. (We're impressed though.)`,
+    };
+  }
+
+  // Quality Over Quantity
+  if (totalPosts < 100 && avgEngagement > 30) {
+    return {
+      type: "Quality Over Quantity",
+      description: "You post like you're rationing words during a shortage. And somehow, it works. Respect.",
+    };
+  }
+
+  // Power User
+  if (totalPosts > 1000) {
+    return {
+      type: "Power User",
+      description: `${totalPosts.toLocaleString()} posts? Touch grass. (But also, wow. That's a lot of thoughts.)`,
+    };
+  }
+
+  // Night Owl
+  if (nightOwlRatio > 0.4) {
+    return {
+      type: "Night Owl",
+      description: "You post when normal people sleep. Your 2 AM thoughts are either genius or unhinged. No in-between.",
+    };
+  }
+
+  // Early Bird
+  if (earlyBirdRatio > 0.4) {
+    return {
+      type: "Early Bird",
+      description: "Posting at 6 AM? Who hurt you? (Or are you just that person who's annoyingly productive before coffee?)",
+    };
+  }
+
+  // Conversationalist
+  if (replyRatio > 0.4) {
+    return {
+      type: "Conversationalist",
+      description: "You can't help yourself—you reply to everything. Threads would die without you, and you know it.",
+    };
+  }
+
+  // Curator
+  if (repostRatio > 0.3) {
+    return {
+      type: "Curator",
+      description: "You're basically a human algorithm. You find the good stuff and repost it. Original thoughts? Overrated.",
+    };
+  }
+
+  // Thought Leader
+  if (avgEngagement > 50 && totalPosts > 50) {
+    return {
+      type: "Thought Leader",
+      description: "People actually read your posts. Wild concept. You've cracked the code of making people care.",
+    };
+  }
+
+  // Creator
+  if (originalPostRatio > 0.7 && replyRatio < 0.2) {
+    return {
+      type: "Creator",
+      description: "You post original thoughts and ignore replies. Main character energy, and honestly? We're here for it.",
+    };
+  }
+
+  // Default: Balanced
+  return {
+    type: "Balanced",
+    description: "You're... fine. Not too much, not too little. Perfectly average. Congratulations?",
+  };
+}
+
+function analyzePostingAge(posts: any[], totalPosts: number, totalReplies: number): { era: string; year: string; description: string } {
+  if (totalPosts === 0) {
+    return {
+      era: "2024s Bluesky",
+      year: "2024",
+      description: "Your posting style matches modern Bluesky.",
+    };
+  }
+
+  // Count how many posts are replies (have a reply.parent field)
+  const replyPosts = posts.filter((item: any) => item.post.record?.reply).length;
+  const replyRatio = replyPosts / totalPosts;
+
+  // Calculate average post length
+  let totalLength = 0;
+  let postsWithText = 0;
+  let hashtagCount = 0;
+  let emojiCount = 0;
+
+  posts.forEach((item: any) => {
+    const text = item.post.record?.text || "";
+    if (text.length > 0) {
+      totalLength += text.length;
+      postsWithText++;
+      
+      // Count hashtags
+      const hashtags = text.match(/#\w+/g);
+      if (hashtags) hashtagCount += hashtags.length;
+      
+      // Count emojis (basic emoji detection)
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+      const emojis = text.match(emojiRegex);
+      if (emojis) emojiCount += emojis.length;
+    }
+  });
+
+  const avgLength = postsWithText > 0 ? totalLength / postsWithText : 0;
+  const avgHashtags = postsWithText > 0 ? hashtagCount / postsWithText : 0;
+  const avgEmojis = postsWithText > 0 ? emojiCount / postsWithText : 0;
+
+  // Calculate vintage score (higher = older style)
+  // Factors:
+  // - Longer posts = older (2010s Twitter was verbose)
+  // - More hashtags = older (peak hashtag era was 2010-2015)
+  // - Less emojis = older (emoji usage increased over time)
+  // - More replies = newer (modern social media is more conversational)
+  
+  let vintageScore = 0;
+  
+  // Post length (0-40 points)
+  if (avgLength > 200) vintageScore += 40;
+  else if (avgLength > 150) vintageScore += 30;
+  else if (avgLength > 100) vintageScore += 20;
+  else if (avgLength > 50) vintageScore += 10;
+  
+  // Hashtag usage (0-30 points)
+  if (avgHashtags > 3) vintageScore += 30;
+  else if (avgHashtags > 2) vintageScore += 20;
+  else if (avgHashtags > 1) vintageScore += 10;
+  else if (avgHashtags > 0.5) vintageScore += 5;
+  
+  // Emoji usage (0-20 points, inverted - less emojis = older)
+  if (avgEmojis < 0.1) vintageScore += 20;
+  else if (avgEmojis < 0.5) vintageScore += 15;
+  else if (avgEmojis < 1) vintageScore += 10;
+  else if (avgEmojis < 2) vintageScore += 5;
+  
+  // Reply ratio (0-10 points, inverted - more replies = newer)
+  if (replyRatio < 0.1) vintageScore += 10;
+  else if (replyRatio < 0.2) vintageScore += 7;
+  else if (replyRatio < 0.3) vintageScore += 4;
+
+  // Map score to era
+  if (vintageScore >= 70) {
+    return {
+      era: "2010s Twitter",
+      year: "2010",
+      description: "You still write like hashtags are a personality trait and emojis haven't been invented yet. Peak 2010 energy.",
+    };
+  } else if (vintageScore >= 50) {
+    return {
+      era: "2015s Twitter",
+      year: "2015",
+      description: "You're stuck in the golden age of Twitter—when hashtags were cool and we still had character limits. Classic.",
+    };
+  } else if (vintageScore >= 30) {
+    return {
+      era: "2020s Twitter",
+      year: "2020",
+      description: "You've evolved past hashtag spam but haven't fully embraced the emoji revolution. A transitional era.",
+    };
+  } else {
+    return {
+      era: "2024s Bluesky",
+      year: "2024",
+      description: "You post like you were born on Bluesky yesterday. Short, emoji-heavy, and terminally online. Welcome to the future.",
+    };
+  }
+}
+
 async function analyzeRecap(session: BlueskySession, posts: any[], profile: any, targetYear: number, fetchedIterations?: number, maxIterations?: number) {
   console.log(`Analyzing recap: ${posts.length} total posts fetched, profile DID: ${profile.did}`);
   
@@ -514,6 +733,14 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
   console.log("Analyzing topics...");
   const topics = analyzeTopics(ownPosts);
 
+  // Analyze poster type
+  console.log("Analyzing poster type...");
+  const posterType = analyzePosterType(ownPosts, totalPosts, totalReplies, totalReposts, avgEngagement, longestStreak, hourCounts);
+
+  // Analyze posting age
+  console.log("Analyzing posting age...");
+  const postingAge = analyzePostingAge(ownPosts, totalPosts, totalReplies);
+
   // Check if data was potentially truncated
   const isTruncated = fetchedIterations !== undefined && maxIterations !== undefined && fetchedIterations >= maxIterations;
 
@@ -549,6 +776,8 @@ async function analyzeRecap(session: BlueskySession, posts: any[], profile: any,
     },
     topFans,
     topics,
+    posterType,
+    postingAge,
     year: targetYear,
     truncated: isTruncated,
     _debug: {

@@ -31,7 +31,7 @@ export function Hero() {
         
         {/* One-liner */}
         <p className="opacity-0 animate-fade-in-delay-3 mt-4 text-base sm:text-lg text-muted-foreground/80 max-w-xl mx-auto text-balance">
-          A beautiful, shareable recap of your posts, follows, and moments from the past year.
+          A beautiful, shareable recap of your posts and moments from the past year.
         </p>
         
         {/* CTAs */}
