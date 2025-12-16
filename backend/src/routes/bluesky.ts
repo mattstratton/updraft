@@ -14,6 +14,10 @@ const CACHE_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA ||
                        process.env.RAILWAY_DEPLOYMENT_ID || 
                        `build-${Date.now()}`;
 
+// Log cache version on startup for debugging
+console.log(`📦 Cache version: ${CACHE_VERSION}`);
+console.log(`📦 Railway env vars: GIT_COMMIT_SHA=${process.env.RAILWAY_GIT_COMMIT_SHA?.substring(0, 8) || 'not set'}, DEPLOYMENT_ID=${process.env.RAILWAY_DEPLOYMENT_ID || 'not set'}`);
+
 // Required fields that must exist in cached recap data for it to be valid
 // If any of these are missing, the cache is considered invalid
 const REQUIRED_CACHE_FIELDS = [
@@ -170,6 +174,48 @@ blueskyRouter.post('/recap/regenerate', async (req, res) => {
     console.error("Error in regenerate endpoint:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
+  }
+});
+
+// Debug endpoint to check cache version and status
+blueskyRouter.get('/recap/debug', async (req, res) => {
+  try {
+    const { handle } = req.query;
+    const year = new Date().getFullYear();
+    
+    if (handle) {
+      const normalizedHandle = String(handle).trim().replace(/^@/, "").toLowerCase();
+      const cached = await prisma.recap.findUnique({
+        where: { handle_year: { handle: normalizedHandle, year } },
+      });
+      
+      const cacheData = cached?.data as any;
+      const hasRequiredFields = cacheData ? REQUIRED_CACHE_FIELDS.map(field => ({
+        field,
+        exists: cacheData[field] !== undefined && cacheData[field] !== null
+      })) : [];
+      
+      return res.json({
+        currentCacheVersion: CACHE_VERSION,
+        cachedVersion: cacheData?._cacheVersion || 'none',
+        versionMatches: cacheData?._cacheVersion === CACHE_VERSION,
+        hasRequiredFields,
+        allFieldsPresent: hasRequiredFields.every(f => f.exists),
+        isExpired: cached ? cached.expiresAt <= new Date() : null,
+        expiresAt: cached?.expiresAt || null,
+        createdAt: cached?.createdAt || null,
+      });
+    }
+    
+    res.json({
+      currentCacheVersion: CACHE_VERSION,
+      railwayGitCommit: process.env.RAILWAY_GIT_COMMIT_SHA?.substring(0, 8) || 'not set',
+      railwayDeploymentId: process.env.RAILWAY_DEPLOYMENT_ID || 'not set',
+      requiredFields: REQUIRED_CACHE_FIELDS,
+    });
+  } catch (error) {
+    console.error("Error in debug endpoint:", error);
+    res.status(500).json({ error: "Debug endpoint error" });
   }
 });
 
