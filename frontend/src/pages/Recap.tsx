@@ -674,6 +674,11 @@ export default function Recap() {
     touchStartY.current = e.touches[0].clientY;
   };
 
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Don't prevent default - allow normal scrolling
+    // We'll only handle swipes in touchEnd if it was clearly horizontal
+  };
+
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
 
@@ -683,10 +688,18 @@ export default function Recap() {
     const deltaX = touchEndX - touchStartX.current;
     const deltaY = touchEndY - touchStartY.current;
     
-    // Check if this was a horizontal swipe (not a scroll)
-    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+    // Only trigger swipe if:
+    // 1. Horizontal movement is significantly greater than vertical (2:1 ratio)
+    // 2. Horizontal movement exceeds minimum distance
+    // 3. Vertical movement is small (user wasn't scrolling)
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) * 2;
+    const isSignificantHorizontal = Math.abs(deltaX) > minSwipeDistance;
+    const isSmallVertical = Math.abs(deltaY) < 50; // Allow small vertical movement
     
-    if (isHorizontalSwipe && Math.abs(deltaX) > minSwipeDistance) {
+    if (isHorizontalSwipe && isSignificantHorizontal && isSmallVertical) {
+      // Prevent default only for confirmed horizontal swipes
+      e.preventDefault();
+      
       if (deltaX > 0) {
         // Swipe right - go to previous card
         prevCard();
@@ -833,8 +846,9 @@ export default function Recap() {
 
             {/* Card */}
             <div 
-              className="transition-all duration-300 flex justify-center touch-none"
+              className="transition-all duration-300 flex justify-center"
               onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
               {cardData && <StoryCard ref={cardRef} data={cardData} />}
