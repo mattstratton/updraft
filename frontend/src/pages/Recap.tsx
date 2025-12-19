@@ -171,6 +171,18 @@ export default function Recap() {
     }
   }, []);
 
+  // Track recap view when recap data is loaded (for both generated and shared links)
+  useEffect(() => {
+    if (recap && recap.profile?.handle) {
+      // Track recap view with handle as custom property
+      if (window.plausible) {
+        window.plausible('Recap Viewed', {
+          props: { handle: recap.profile.handle }
+        });
+      }
+    }
+  }, [recap]);
+
   const fetchRecap = async (userHandle: string) => {
     // Normalize handle: remove @, trim, and convert to lowercase
     // Bluesky handles are case-insensitive but should be normalized to lowercase
@@ -245,7 +257,9 @@ export default function Recap() {
       
       // Track successful recap generation with Plausible
       if (window.plausible) {
-        window.plausible('Recap Generated');
+        window.plausible('Recap Generated', {
+          props: { handle: cleanHandle }
+        });
       }
     } catch (error: unknown) {
       console.error("Error fetching recap:", error);
