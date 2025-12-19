@@ -22,3 +22,5 @@ model Recap {
   @@map("recaps")
 }
 
+
+

@@ -242,6 +242,11 @@ export default function Recap() {
 
       setRecap(data);
       toast.success(`Your ${data.year} recap is ready!`);
+      
+      // Track successful recap generation with Plausible
+      if (window.plausible) {
+        window.plausible('Recap Generated');
+      }
     } catch (error: unknown) {
       console.error("Error fetching recap:", error);
       const message = error instanceof Error ? error.message : "Failed to fetch your recap";
@@ -288,6 +293,11 @@ export default function Recap() {
       setRecap(data);
       setCurrentIndex(0); // Reset to first card
       toast.success("Recap regenerated!");
+      
+      // Track successful recap regeneration with Plausible
+      if (window.plausible) {
+        window.plausible('Recap Regenerated');
+      }
     } catch (error: unknown) {
       console.error("Error regenerating recap:", error);
       const message = error instanceof Error ? error.message : "Failed to regenerate recap";
